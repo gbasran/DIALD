@@ -1,50 +1,23 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Clock, Target, TrendingUp, Flame, Zap, Brain, RefreshCw, MessageSquare, Plus, ArrowRight } from 'lucide-react';
 import { useCourses } from '@/hooks/use-courses';
 import { useAssignments } from '@/hooks/use-assignments';
-import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, getGreeting } from '@/lib/utils';
+import { useWhatNow } from '@/hooks/use-whatnow';
+import { useInsights } from '@/hooks/use-insights';
+import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, formatRelativeTime, getGreeting } from '@/lib/utils';
+import { deriveActivityEvents } from '@/lib/activity';
 import { WhatNowCard } from '@/components/dashboard/WhatNowCard';
+import { StatusDots } from '@/components/assignments/StatusDots';
 import { STORAGE_KEYS } from '@/lib/types';
-import type { ClassTime, WhatNowResult, InsightCard, Conversation } from '@/lib/types';
-
-const WHATNOW_CACHE_KEY = 'diald-whatnow-cache';
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-
-interface WhatNowCache {
-  result: WhatNowResult;
-  cachedAt: number;
-  assignmentHash: string;
-}
-
-function computeAssignmentHash(assignments: Array<{ id: string; status: string }>): string {
-  return assignments
-    .filter(a => a.status !== 'done')
-    .map(a => `${a.id}:${a.status}`)
-    .sort()
-    .join('|');
-}
+import type { ClassTime, Conversation } from '@/lib/types';
 
 // Demo data (kept for panels not yet wired to real data)
-const demoActivity = [
-  { id: '1', action: 'Completed focus session', detail: 'CS 301 -- 45 min', time: '2h ago', type: 'study' as const },
-  { id: '2', action: 'Assignment submitted', detail: 'MATH 240 PS6', time: '4h ago', type: 'assignment' as const },
-  { id: '3', action: 'Streak milestone!', detail: '7-day streak', time: '5h ago', type: 'achievement' as const },
-  { id: '4', action: 'AI chat session', detail: 'Sorting algorithms', time: '1d ago', type: 'chat' as const },
-];
-
 const demoWeek = [true, true, true, false, true, true, true];
 const demoHourly = [0, 0, 15, 45, 30, 0, 22, 15, 0, 0, 0, 0];
-
-const activityDot: Record<string, string> = {
-  study: 'bg-primary',
-  assignment: 'bg-[hsl(var(--warning))]',
-  achievement: 'bg-accent',
-  chat: 'bg-[hsl(var(--focus-purple))]',
-};
 
 const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -54,135 +27,37 @@ const WEEK_DAY_ABBREV: Record<string, string> = { Monday: 'Mon', Tuesday: 'Tue',
 export default function DashboardPage() {
   const router = useRouter();
   const { courses, isLoaded: coursesLoaded } = useCourses();
-  const { assignments, isLoaded: assignmentsLoaded } = useAssignments();
+  const { assignments, isLoaded: assignmentsLoaded, changeStatus } = useAssignments();
+  const aiResult = useWhatNow();
+  const { insights, isLoading: insightsLoading, refresh: fetchInsights } = useInsights();
+
   const [greeting, setGreeting] = useState('');
   const [todayName, setTodayName] = useState('');
-  const [aiResult, setAiResult] = useState<WhatNowResult | null>(null);
-  const [insights, setInsights] = useState<InsightCard[]>([]);
-  const [insightsLoading, setInsightsLoading] = useState(false);
-  const [lastChatTime, setLastChatTime] = useState<string>('');
+  const [lastConversation, setLastConversation] = useState<{ id: string; time: string } | null>(null);
 
   useEffect(() => {
     setGreeting(getGreeting());
     setTodayName(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
 
-    // Read last chat interaction time from localStorage
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
       if (raw) {
         const convos: Conversation[] = JSON.parse(raw);
         if (convos.length > 0) {
-          const latest = Math.max(...convos.map(c => c.updatedAt));
-          const diff = Date.now() - latest;
-          const minutes = Math.floor(diff / 60000);
-          const hours = Math.floor(diff / 3600000);
-          const days = Math.floor(diff / 86400000);
-          if (days > 0) setLastChatTime(`${days}d ago`);
-          else if (hours > 0) setLastChatTime(`${hours}h ago`);
-          else if (minutes > 0) setLastChatTime(`${minutes}m ago`);
-          else setLastChatTime('just now');
+          const sorted = [...convos].sort((a, b) => b.updatedAt - a.updatedAt);
+          setLastConversation({
+            id: sorted[0].id,
+            time: formatRelativeTime(sorted[0].updatedAt),
+          });
         }
       }
     } catch { /* no chat history */ }
   }, []);
 
-  // What Now AI caching logic
-  useEffect(() => {
-    if (!assignmentsLoaded || !coursesLoaded) return;
-    const hash = computeAssignmentHash(assignments);
-
-    // Check cache
-    try {
-      const raw = localStorage.getItem(WHATNOW_CACHE_KEY);
-      if (raw) {
-        const cache: WhatNowCache = JSON.parse(raw);
-        if (cache.assignmentHash === hash && Date.now() - cache.cachedAt < CACHE_TTL) {
-          setAiResult(cache.result);
-          return;
-        }
-      }
-    } catch { /* invalid cache, refetch */ }
-
-    // Build context for API
-    const courseMap = new Map(courses.map(c => [c.id, c]));
-    const apiAssignments = assignments.map(a => ({
-      id: a.id,
-      name: a.name,
-      courseCode: courseMap.get(a.courseId)?.code || 'Unknown',
-      dueDate: a.dueDate,
-      estimatedMinutes: a.estimatedMinutes,
-      status: a.status,
-    }));
-    const apiCourses = courses.map(c => ({
-      code: c.code,
-      name: c.name,
-      schedule: c.schedule.map(s => ({ day: s.day, startTime: s.startTime, endTime: s.endTime })),
-    }));
-
-    fetch('/api/whatnow', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assignments: apiAssignments, courses: apiCourses }),
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`${res.status}`);
-        return res.json();
-      })
-      .then((result: WhatNowResult) => {
-        setAiResult(result);
-        const cache: WhatNowCache = { result, cachedAt: Date.now(), assignmentHash: hash };
-        localStorage.setItem(WHATNOW_CACHE_KEY, JSON.stringify(cache));
-      })
-      .catch(() => {
-        // Fallback: AI unavailable, aiResult stays null -> use deadline-based
-      });
-  }, [assignments, courses, assignmentsLoaded, coursesLoaded]);
-
-  // Fetch insights
-  const fetchInsights = useCallback(() => {
-    if (!assignmentsLoaded || !coursesLoaded) return;
-    setInsightsLoading(true);
-    const cMap = new Map(courses.map(c => [c.id, c]));
-    const apiAssignments = assignments.map(a => ({
-      name: a.name,
-      courseCode: cMap.get(a.courseId)?.code || 'Unknown',
-      dueDate: a.dueDate,
-      estimatedMinutes: a.estimatedMinutes,
-      status: a.status,
-    }));
-    const apiCourses = courses.map(c => ({ code: c.code, name: c.name }));
-
-    fetch('/api/insights', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assignments: apiAssignments, courses: apiCourses }),
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`${res.status}`);
-        return res.json();
-      })
-      .then((data: { insights: InsightCard[] }) => {
-        setInsights(data.insights);
-      })
-      .catch(() => {
-        setInsights([{
-          id: 'fallback',
-          title: 'Keep going',
-          description: 'Keep going -- every study session counts!',
-          type: 'encouragement',
-        }]);
-      })
-      .finally(() => setInsightsLoading(false));
-  }, [assignments, courses, assignmentsLoaded, coursesLoaded]);
-
-  useEffect(() => {
-    fetchInsights();
-  }, [fetchInsights]);
-
   const goalPct = Math.min(Math.round((127 / 150) * 100), 100);
   const maxH = Math.max(...demoHourly, 1);
 
-  // Loading state — match layout dimensions while data loads
+  // Loading state
   if (!coursesLoaded || !assignmentsLoaded) {
     return (
       <div className="flex h-full flex-col animate-fade-in">
@@ -256,16 +131,14 @@ export default function DashboardPage() {
   }
 
   const upcoming = incompleteAssignments
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-    .slice(0, 5)
-    .map(a => ({
-      id: a.id,
-      title: a.name,
-      course: courseMap.get(a.courseId)?.code || 'Unknown',
-      due: formatRelativeDate(a.dueDate),
-      urgencyBorder: getUrgencyBorder(a.dueDate),
-      urgencyColor: getUrgencyColor(a.dueDate),
-    }));
+    .sort((a, b) => {
+      if (a.status === 'in-progress' && b.status !== 'in-progress') return -1;
+      if (a.status !== 'in-progress' && b.status === 'in-progress') return 1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    })
+    .slice(0, 5);
+
+  const activityEvents = deriveActivityEvents(assignments, courses);
 
   return (
     <div className="flex h-full flex-col animate-fade-in">
@@ -283,9 +156,8 @@ export default function DashboardPage() {
       {/* Full viewport grid */}
       <div className="grid min-h-0 flex-1 gap-2.5 grid-cols-[180px_1fr_1fr]">
 
-        {/* ── LEFT COLUMN: Stats ── */}
+        {/* LEFT COLUMN: Stats */}
         <div className="flex flex-col gap-2.5">
-          {/* Stat tiles */}
           {[
             { title: 'Active Courses', value: String(courses.length), icon: BookOpen, sub: 'this semester', color: '' },
             { title: 'Due This Week', value: String(dueThisWeek), icon: Target, sub: `${dueThisWeek === 0 ? 'all clear' : 'assignments pending'}`, color: dueThisWeek > 0 ? 'text-destructive' : '' },
@@ -302,26 +174,38 @@ export default function DashboardPage() {
             </div>
           ))}
 
-          {/* Recent Activity — compact for left column */}
+          {/* Recent Activity */}
           <div className="glass glow-border flex-1 rounded-xl p-3 flex flex-col min-h-0">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">Activity</p>
             <div className="space-y-2 flex-1 overflow-hidden">
-              {demoActivity.slice(0, 3).map((item) => (
-                <div key={item.id} className="flex items-start gap-1.5">
-                  <div className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${activityDot[item.type]}`} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-medium leading-tight truncate">{item.action}</p>
-                    <p className="text-[9px] text-muted-foreground/40">{item.time}</p>
-                  </div>
-                </div>
-              ))}
+              {activityEvents.length > 0 ? (
+                activityEvents.slice(0, 3).map((item) => {
+                  const dotColor = item.action === 'Completed'
+                    ? 'bg-accent'
+                    : item.action === 'Started working on'
+                    ? 'bg-primary'
+                    : 'bg-[hsl(var(--warning))]';
+                  return (
+                    <div key={item.id} className="flex items-start gap-1.5">
+                      <div className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-medium leading-tight truncate">{item.action}</p>
+                        <p className="text-[9px] text-muted-foreground/60 truncate">{item.detail}</p>
+                        <p className="text-[9px] text-muted-foreground/40">{item.time}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-[10px] text-muted-foreground/50">No activity yet</p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* ── CENTER COLUMN ── */}
+        {/* CENTER COLUMN */}
         <div className="flex flex-col gap-2.5 min-h-0">
-          {/* What Now — AI-powered or deadline fallback */}
+          {/* What Now */}
           <WhatNowCard
             task={aiResult?.task || (mostUrgent ? mostUrgent.name : 'All caught up!')}
             course={aiResult?.courseCode || (mostUrgent ? (courseMap.get(mostUrgent.courseId)?.code || 'Unknown') : '')}
@@ -329,7 +213,7 @@ export default function DashboardPage() {
             className="glass glow-border"
           />
 
-          {/* This Week — weekly schedule view */}
+          {/* This Week */}
           <div className="glass glow-border rounded-xl p-3.5 flex-1 min-h-0 flex flex-col">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">This Week</p>
             {courses.length > 0 ? (
@@ -359,7 +243,10 @@ export default function DashboardPage() {
                             key={`a-${a.id}`}
                             className={`rounded px-1 py-0.5 border border-dashed ${getUrgencyBorder(a.dueDate)} bg-background/40`}
                           >
-                            <p className="text-[8px] font-medium leading-tight truncate">{a.name}</p>
+                            <div className="flex items-center gap-0.5">
+                              <StatusDots status={a.status} interactive={false} size="sm" />
+                              <p className="text-[8px] font-medium leading-tight truncate">{a.name}</p>
+                            </div>
                             <p className={`text-[7px] leading-tight ${getUrgencyColor(a.dueDate)}`}>Due</p>
                           </div>
                         ))}
@@ -376,7 +263,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Study Streak + Focus Time — side by side to fill space */}
+          {/* Study Streak + Focus Time */}
           <div className="grid min-h-0 flex-1 grid-cols-2 gap-2.5">
             {/* Streak */}
             <div className="glass glow-border rounded-xl p-3.5 flex flex-col">
@@ -441,19 +328,27 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── RIGHT COLUMN: Intel feeds ── */}
+        {/* RIGHT COLUMN: Intel feeds */}
         <div className="flex flex-col gap-2.5 min-h-0">
           {/* Upcoming */}
           <div className="glass glow-border rounded-xl p-3.5">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">Upcoming Assignments</p>
             {upcoming.length > 0 ? (
               <div className="space-y-1.5">
-                {upcoming.map((item) => (
-                  <div key={item.id} className={`rounded-md border-l-[3px] bg-background/20 px-2.5 py-1.5 ${item.urgencyBorder}`}>
-                    <p className="text-xs font-medium leading-tight">{item.title}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground/60">{item.course}</span>
-                      <span className={`text-[10px] font-medium ${item.urgencyColor}`}>{item.due}</span>
+                {upcoming.map((a) => (
+                  <div key={a.id} className={`rounded-md border-l-[3px] bg-background/20 px-2.5 py-1.5 flex items-center gap-2 ${a.status === 'in-progress' ? 'border-l-amber-400' : getUrgencyBorder(a.dueDate)}`}>
+                    <StatusDots
+                      status={a.status}
+                      interactive
+                      size="md"
+                      onStatusChange={(status) => changeStatus(a.id, status)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium leading-tight truncate">{a.name}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground/60">{courseMap.get(a.courseId)?.code || 'Unknown'}</span>
+                        <span className={`text-[10px] font-medium ${getUrgencyColor(a.dueDate)}`}>{formatRelativeDate(a.dueDate)}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -471,42 +366,36 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-[hsl(var(--focus-purple))]">Chat with DIALD</p>
-                {lastChatTime && (
-                  <p className="text-[10px] text-muted-foreground/60">Last chat {lastChatTime}</p>
+                {lastConversation && (
+                  <p className="text-[10px] text-muted-foreground/60">Last chat {lastConversation.time}</p>
                 )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-px bg-border/30">
               <button
-                onClick={() => {
-                  router.push('/chat');
-                }}
+                onClick={() => router.push('/chat')}
                 className="flex items-center justify-center gap-1.5 bg-background px-3 py-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/[0.06]"
               >
                 <Plus className="h-3 w-3" />
                 New Chat
               </button>
-              {lastChatTime ? (
-                <Link
-                  href="/chat"
-                  className="flex items-center justify-center gap-1.5 bg-background px-3 py-2 text-[11px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.06]"
-                >
-                  Continue
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              ) : (
-                <Link
-                  href="/chat"
-                  className="flex items-center justify-center gap-1.5 bg-background px-3 py-2 text-[11px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.06]"
-                >
-                  Start Chatting
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              )}
+              <button
+                onClick={() => {
+                  if (lastConversation) {
+                    router.push(`/chat?c=${lastConversation.id}`);
+                  } else {
+                    router.push('/chat');
+                  }
+                }}
+                className="flex items-center justify-center gap-1.5 bg-background px-3 py-2 text-[11px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.06]"
+              >
+                {lastConversation ? 'Continue' : 'Start Chatting'}
+                <ArrowRight className="h-3 w-3" />
+              </button>
             </div>
           </div>
 
-          {/* AI Insights — dynamic panel */}
+          {/* AI Insights */}
           <div className="glass glow-border rounded-xl p-3.5 flex-1 min-h-0 flex flex-col border-[hsl(var(--focus-purple))]/10">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
