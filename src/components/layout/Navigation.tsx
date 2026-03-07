@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, BookOpen, MessageSquare, Timer, Zap, Shield } from 'lucide-react';
+import { LayoutDashboard, BookOpen, ClipboardList, MessageSquare, Timer, Zap, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -21,6 +21,14 @@ const navItems = [
     icon: BookOpen,
     stat: '4 active',
     statColor: 'text-primary',
+  },
+  {
+    href: '/assignments',
+    label: 'Assignments',
+    subtitle: 'Task Tracker',
+    icon: ClipboardList,
+    stat: 'Track',
+    statColor: 'text-[hsl(var(--warning))]',
   },
   {
     href: '/chat',
