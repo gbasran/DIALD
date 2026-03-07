@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContentStream({
-      model: 'gemini-2.0-flash-lite',
+      model: 'gemini-3.1-flash-lite-preview',
       contents,
       config: {
         systemInstruction: systemPrompt,

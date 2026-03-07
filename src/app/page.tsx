@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { BookOpen, Clock, Target, TrendingUp, Flame, Zap, Brain, RefreshCw, MessageSquare } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { BookOpen, Clock, Target, TrendingUp, Flame, Zap, Brain, RefreshCw, MessageSquare, Plus, ArrowRight } from 'lucide-react';
 import { useCourses } from '@/hooks/use-courses';
 import { useAssignments } from '@/hooks/use-assignments';
 import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, getGreeting } from '@/lib/utils';
@@ -51,6 +52,7 @@ const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as co
 const WEEK_DAY_ABBREV: Record<string, string> = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri' };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { courses, isLoaded: coursesLoaded } = useCourses();
   const { assignments, isLoaded: assignmentsLoaded } = useAssignments();
   const [greeting, setGreeting] = useState('');
@@ -462,16 +464,48 @@ export default function DashboardPage() {
           </div>
 
           {/* Chat with DIALD */}
-          <Link href="/chat" className="glass glow-border rounded-xl p-3.5 flex items-center gap-3 hover:bg-primary/[0.03] transition-colors">
-            <div className="rounded-lg bg-[hsl(var(--focus-purple))]/15 p-2">
-              <MessageSquare className="h-4 w-4 text-[hsl(var(--focus-purple))]" />
+          <div className="glass glow-border rounded-xl overflow-hidden">
+            <div className="flex items-center gap-3 px-3.5 pt-3 pb-2">
+              <div className="rounded-lg bg-[hsl(var(--focus-purple))]/15 p-2">
+                <MessageSquare className="h-4 w-4 text-[hsl(var(--focus-purple))]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-[hsl(var(--focus-purple))]">Chat with DIALD</p>
+                {lastChatTime && (
+                  <p className="text-[10px] text-muted-foreground/60">Last chat {lastChatTime}</p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium">Chat with DIALD</p>
-              <p className="text-[10px] text-muted-foreground/60">{lastChatTime || 'No chats yet'}</p>
+            <div className="grid grid-cols-2 gap-px bg-border/30">
+              <button
+                onClick={() => {
+                  localStorage.removeItem(STORAGE_KEYS.CHAT_HISTORY);
+                  window.location.href = '/chat';
+                }}
+                className="flex items-center justify-center gap-1.5 bg-background px-3 py-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/[0.06]"
+              >
+                <Plus className="h-3 w-3" />
+                New Chat
+              </button>
+              {lastChatTime ? (
+                <Link
+                  href="/chat"
+                  className="flex items-center justify-center gap-1.5 bg-background px-3 py-2 text-[11px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.06]"
+                >
+                  Continue
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              ) : (
+                <Link
+                  href="/chat"
+                  className="flex items-center justify-center gap-1.5 bg-background px-3 py-2 text-[11px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.06]"
+                >
+                  Start Chatting
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
             </div>
-            <span className="text-muted-foreground/40 text-xs">&rarr;</span>
-          </Link>
+          </div>
 
           {/* AI Insights — dynamic panel */}
           <div className="glass glow-border rounded-xl p-3.5 flex-1 min-h-0 flex flex-col border-[hsl(var(--focus-purple))]/10">

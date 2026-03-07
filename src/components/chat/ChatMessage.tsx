@@ -2,6 +2,9 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import type { ChatMessage as ChatMessageType } from '@/lib/types';
 
 interface ChatMessageProps {
@@ -41,7 +44,7 @@ export function ChatMessage({ message, isStreaming, onRetry }: ChatMessageProps)
     <div className="flex justify-start">
       <div className="max-w-[85%] rounded-2xl bg-muted/50 px-4 py-3">
         <div className="prose prose-sm dark:prose-invert max-w-none [&_pre]:bg-background [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-sm [&_pre]:font-mono [&_pre]:overflow-x-auto [&_code]:text-sm [&_code]:font-mono [&_p]:leading-relaxed [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
             {message.content}
           </ReactMarkdown>
         </div>

@@ -1,9 +1,11 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, BookOpen, ClipboardList, MessageSquare, Timer, Zap, Shield } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { LayoutDashboard, BookOpen, ClipboardList, MessageSquare, Timer, Zap, Shield, Plus, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { STORAGE_KEYS } from '@/lib/types';
 
 const navItems = [
   {
@@ -31,14 +33,6 @@ const navItems = [
     statColor: 'text-[hsl(var(--warning))]',
   },
   {
-    href: '/chat',
-    label: 'Chat',
-    subtitle: 'AI Strategist',
-    icon: MessageSquare,
-    stat: 'Ready',
-    statColor: 'text-muted-foreground',
-  },
-  {
     href: '/focus',
     label: 'Focus',
     subtitle: 'Deep Work Mode',
@@ -46,10 +40,34 @@ const navItems = [
     stat: '25:00',
     statColor: 'text-[hsl(var(--focus-purple))]',
   },
+  {
+    href: '/chat',
+    label: 'Chat',
+    subtitle: 'AI Strategist',
+    icon: MessageSquare,
+    stat: 'Ready',
+    statColor: 'text-[hsl(var(--focus-purple))]',
+  },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [hasChatHistory, setHasChatHistory] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.CHAT_HISTORY);
+      if (raw) {
+        const messages = JSON.parse(raw);
+        setHasChatHistory(messages.some((m: { role: string }) => m.role === 'user'));
+      } else {
+        setHasChatHistory(false);
+      }
+    } catch {
+      setHasChatHistory(false);
+    }
+  }, [pathname]);
 
   if (pathname === '/focus') {
     return null;
@@ -76,6 +94,69 @@ export function Navigation() {
         <div className="flex flex-1 flex-col gap-2 p-3">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
+            const isChat = item.href === '/chat';
+
+            if (isChat) {
+              return (
+                <div
+                  key={item.href}
+                  className={cn(
+                    'group relative flex flex-1 flex-col rounded-xl overflow-hidden transition-all duration-200',
+                    isActive
+                      ? 'glass bg-primary/[0.08] ring-1 ring-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.08)]'
+                      : 'border border-border/40 bg-muted/10'
+                  )}
+                >
+                  {/* Top row: icon + label */}
+                  <div className="flex items-center gap-2.5 p-3 pb-2">
+                    <div className={cn(
+                      'flex h-9 w-9 items-center justify-center rounded-lg border transition-all',
+                      isActive
+                        ? 'border-primary/30 bg-primary/15 shadow-[0_0_12px_hsl(var(--primary)/0.2)]'
+                        : 'border-[hsl(var(--focus-purple))]/20 bg-[hsl(var(--focus-purple))]/10'
+                    )}>
+                      <item.icon className={cn(
+                        'h-4 w-4 transition-colors',
+                        isActive ? 'text-primary' : 'text-[hsl(var(--focus-purple))]'
+                      )} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        'text-sm font-semibold leading-tight',
+                        isActive ? 'text-primary' : 'text-[hsl(var(--focus-purple))]'
+                      )}>{item.label}</p>
+                      <p className="text-[10px] text-muted-foreground/50">{item.subtitle}</p>
+                    </div>
+                  </div>
+
+                  {/* Split actions */}
+                  <div className="mt-auto grid grid-cols-2 gap-px bg-border/30">
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem(STORAGE_KEYS.CHAT_HISTORY);
+                        setHasChatHistory(false);
+                        window.location.href = '/chat';
+                      }}
+                      className="flex items-center justify-center gap-1 bg-background/50 px-2 py-1.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/[0.08]"
+                    >
+                      <Plus className="h-3 w-3" />
+                      New
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (pathname === '/chat') return;
+                        router.push('/chat');
+                      }}
+                      className="flex items-center justify-center gap-1 bg-background/50 px-2 py-1.5 text-[10px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.08]"
+                    >
+                      {hasChatHistory ? 'Continue' : 'Start'}
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={item.href}

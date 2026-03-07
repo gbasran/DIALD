@@ -1,17 +1,18 @@
 'use client';
 
 import { useRef, useState, useCallback } from 'react';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Plus } from 'lucide-react';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled: boolean;
+  onNewChat?: () => void;
 }
 
 const MAX_LENGTH = 2000;
 const WARN_THRESHOLD = 1500;
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, onNewChat }: ChatInputProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -74,11 +75,24 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           <ArrowUp className="h-4 w-4" />
         </button>
       </div>
-      {value.length > WARN_THRESHOLD && (
-        <p className="mt-1 text-right text-xs text-muted-foreground">
-          {value.length}/{MAX_LENGTH}
-        </p>
-      )}
+      <div className="mt-2 flex items-center justify-between">
+        {value.length > WARN_THRESHOLD ? (
+          <p className="text-xs text-muted-foreground">
+            {value.length}/{MAX_LENGTH}
+          </p>
+        ) : (
+          <div />
+        )}
+        {onNewChat && (
+          <button
+            onClick={onNewChat}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/50 px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-all hover:scale-105 hover:border-primary/30 hover:bg-muted hover:text-foreground hover:shadow-md active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            New Chat
+          </button>
+        )}
+      </div>
     </div>
   );
 }

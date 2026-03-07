@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import { RotateCcw, Plus, AlertCircle } from 'lucide-react';
+import { RotateCcw, AlertCircle } from 'lucide-react';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import type { ChatMessage as ChatMessageType } from '@/lib/types';
@@ -31,17 +31,6 @@ export function ChatConversation({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
-        <button
-          onClick={onNewChat}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          New Chat
-        </button>
-      </div>
-
       {/* Messages */}
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.map((msg, i) => {
@@ -78,7 +67,7 @@ export function ChatConversation({
       </div>
 
       {/* Input */}
-      <ChatInput onSend={onSend} disabled={isStreaming} />
+      <ChatInput onSend={onSend} disabled={isStreaming} onNewChat={onNewChat} />
     </div>
   );
 }
