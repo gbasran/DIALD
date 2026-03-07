@@ -8,6 +8,8 @@ env/
 # Build outputs
 dist/
 build/
+.next/
+out/
 *.egg-info/
 __pycache__/
 *.pyc
