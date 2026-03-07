@@ -1,6 +1,7 @@
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, RotateCcw, Coffee } from 'lucide-react';
+import { ArrowLeft, Play, RotateCcw, Coffee } from 'lucide-react';
 
 const presets = [
   { label: '25 min', subtitle: 'Pomodoro', minutes: 25 },
@@ -17,8 +18,18 @@ const todaySessions = [
 export default function FocusPage() {
   return (
     <div className="animate-fade-in space-y-8 pb-8">
+      {/* Exit button */}
+      <div className="pt-4 px-4">
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+            Exit Focus
+          </Button>
+        </Link>
+      </div>
+
       {/* Centered timer display */}
-      <div className="flex flex-col items-center pt-8 text-center">
+      <div className="flex flex-col items-center text-center">
         <h2 className="font-heading text-lg font-semibold text-muted-foreground">Focus Mode</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Breathe in. You have one thing to do right now.
