@@ -70,6 +70,10 @@ export function useChat(conversationId?: string) {
   const abortRef = useRef<AbortController | null>(null);
   const initialized = useRef(false);
 
+  // Keep a ref with the latest messages so async callbacks avoid stale closures
+  const messagesRef = useRef<ChatMessage[]>([]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   const { courses } = useCourses();
   const { assignments } = useAssignments();
 
@@ -121,7 +125,7 @@ export function useChat(conversationId?: string) {
       // Create conversation on first user message if none exists
       let currentId = activeIdRef.current;
       if (!currentId) {
-        const initialMessages = [...messages, userMessage];
+        const initialMessages = [...messagesRef.current, userMessage];
         currentId = createConversation(initialMessages);
         activeIdRef.current = currentId;
       }
@@ -139,7 +143,7 @@ export function useChat(conversationId?: string) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            messages: [...messages, userMessage]
+            messages: [...messagesRef.current, userMessage]
               .filter((m) => m.role === 'user' || m.role === 'assistant')
               .slice(-10)
               .map((m) => ({ role: m.role, content: m.content })),
@@ -156,7 +160,7 @@ export function useChat(conversationId?: string) {
           setError(errorText);
           setIsStreaming(false);
           if (activeIdRef.current === capturedId) {
-            updateConversation(capturedId, [...messages, userMessage]);
+            updateConversation(capturedId, [...messagesRef.current, userMessage]);
           }
           return;
         }
@@ -195,15 +199,16 @@ export function useChat(conversationId?: string) {
 
         // Finalize and persist
         if (activeIdRef.current === capturedId) {
-          setMessages((prev) => {
-            const finalized = prev.map((m) =>
+          setMessages((prev) =>
+            prev.map((m) =>
               m.id === assistantId
                 ? { ...m, content: accumulated, timestamp: Date.now() }
                 : m
-            );
-            updateConversation(capturedId, finalized);
-            return finalized;
-          });
+            )
+          );
+          // Persist outside the updater — reconstruct from known state
+          const allMessages = [...messagesRef.current.filter(m => m.id !== assistantId), userMessage, { id: assistantId, role: 'assistant' as const, content: accumulated, timestamp: Date.now() }];
+          updateConversation(capturedId, allMessages);
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
@@ -215,7 +220,7 @@ export function useChat(conversationId?: string) {
         setIsStreaming(false);
       }
     },
-    [messages, courses, assignments, createConversation, updateConversation]
+    [courses, assignments, createConversation, updateConversation]
   );
 
   const clearChat = useCallback(() => {
@@ -227,19 +232,20 @@ export function useChat(conversationId?: string) {
   }, []);
 
   const retryLast = useCallback(async () => {
-    const lastUserIndex = [...messages]
+    const current = messagesRef.current;
+    const lastUserIndex = [...current]
       .reverse()
       .findIndex((m) => m.role === 'user');
     if (lastUserIndex === -1) return;
 
-    const actualIndex = messages.length - 1 - lastUserIndex;
-    const lastUserMessage = messages[actualIndex];
+    const actualIndex = current.length - 1 - lastUserIndex;
+    const lastUserMessage = current[actualIndex];
 
     setMessages((prev) => prev.slice(0, actualIndex));
     setError(null);
 
     await sendMessage(lastUserMessage.content);
-  }, [messages, sendMessage]);
+  }, [sendMessage]);
 
   return {
     messages,

@@ -55,7 +55,10 @@ export async function POST(req: Request) {
     ? buildSystemPrompt(body.studentContext)
     : 'You are DIALD, an AI study companion. Be helpful and concise.';
 
-  const recentMessages = body.messages.slice(-10);
+  const recentMessages = body.messages.slice(-10).map((msg) => ({
+    ...msg,
+    content: msg.content.slice(0, 4000),
+  }));
   const contents = recentMessages.map((msg) => ({
     role: msg.role === 'assistant' ? ('model' as const) : ('user' as const),
     parts: [{ text: msg.content }],

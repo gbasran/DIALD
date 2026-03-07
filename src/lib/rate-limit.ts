@@ -1,3 +1,7 @@
+// NOTE: In-memory rate limiting — works for single-process deployments (next start).
+// On serverless platforms (Vercel, AWS Lambda), each isolate has its own store,
+// making this effectively per-process. Use Redis or similar for production serverless.
+
 interface RateLimitEntry {
   count: number;
   resetAt: number;

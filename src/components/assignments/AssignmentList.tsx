@@ -62,9 +62,7 @@ export function AssignmentList({
     onStatusChange(assignment.id, newStatus);
   }
 
-  function getCourse(courseId: string) {
-    return courses.find((c) => c.id === courseId);
-  }
+  const courseMap = new Map(courses.map((c) => [c.id, c]));
 
   // Sort: in-progress first (by due date), then todo (by due date), then done (by due date)
   const statusOrder: Record<Assignment['status'], number> = {
@@ -95,7 +93,7 @@ export function AssignmentList({
   return (
     <div className="space-y-3">
       {sorted.map((assignment) => {
-        const course = getCourse(assignment.courseId);
+        const course = courseMap.get(assignment.courseId);
         const isDone = assignment.status === 'done';
         const isInProgress = assignment.status === 'in-progress';
         const isCelebrating = celebratingId === assignment.id;

@@ -12,40 +12,30 @@ const navItems = [
     label: 'Dashboard',
     subtitle: 'Mission Control',
     icon: LayoutDashboard,
-    stat: 'LIVE',
-    statColor: 'text-accent',
   },
   {
     href: '/courses',
     label: 'Courses',
     subtitle: 'Active Operations',
     icon: BookOpen,
-    stat: '4 active',
-    statColor: 'text-primary',
   },
   {
     href: '/assignments',
     label: 'Assignments',
     subtitle: 'Task Tracker',
     icon: ClipboardList,
-    stat: 'Track',
-    statColor: 'text-[hsl(var(--warning))]',
   },
   {
     href: '/focus',
     label: 'Focus',
     subtitle: 'Deep Work Mode',
     icon: Timer,
-    stat: '25:00',
-    statColor: 'text-[hsl(var(--focus-purple))]',
   },
   {
     href: '/chat',
     label: 'Chat',
     subtitle: 'AI Strategist',
     icon: MessageSquare,
-    stat: 'Ready',
-    statColor: 'text-[hsl(var(--focus-purple))]',
   },
 ];
 
@@ -186,9 +176,6 @@ export function Navigation() {
                       {isActive ? 'Active' : 'Standby'}
                     </span>
                   </div>
-                  <span className={cn('text-[10px] font-medium', item.statColor)}>
-                    {item.stat}
-                  </span>
                 </div>
               </Link>
             );
@@ -220,19 +207,19 @@ export function Navigation() {
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-muted-foreground/50">Weekly progress</span>
-                <span className="font-medium tabular-nums text-primary">85%</span>
+                <span className="font-medium tabular-nums text-primary">&mdash;</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
-                <div className="h-full w-[85%] rounded-full bg-gradient-to-r from-primary/60 to-primary" />
+                <div className="h-full w-0 rounded-full bg-gradient-to-r from-primary/60 to-primary" />
               </div>
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-muted-foreground/50">Study streak</span>
-                <span className="font-medium tabular-nums text-[hsl(var(--warning))]">7 days</span>
+                <span className="font-medium tabular-nums text-[hsl(var(--warning))]">&mdash;</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
-                <div className="h-full w-[50%] rounded-full bg-gradient-to-r from-[hsl(var(--warning)/0.6)] to-[hsl(var(--warning))]" />
+                <div className="h-full w-0 rounded-full bg-gradient-to-r from-[hsl(var(--warning)/0.6)] to-[hsl(var(--warning))]" />
               </div>
             </div>
           </div>

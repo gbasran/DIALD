@@ -97,7 +97,13 @@ Respond with ONLY valid JSON, no markdown fences:
       .replace(/\s*```\s*$/, '')
       .trim();
 
-    const result = JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    const result = {
+      assignmentId: String(parsed.assignmentId ?? ''),
+      task: String(parsed.task ?? ''),
+      courseCode: String(parsed.courseCode ?? ''),
+      reason: String(parsed.reason ?? ''),
+    };
     return Response.json(result);
   } catch (error) {
     console.error('WhatNow error:', error);

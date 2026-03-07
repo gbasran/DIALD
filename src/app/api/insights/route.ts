@@ -1,6 +1,19 @@
+import { checkRateLimit } from '@/lib/rate-limit';
 import type { InsightCard } from '@/lib/types';
 
 export async function POST(req: Request) {
+  const ip =
+    req.headers.get('x-forwarded-for') ||
+    req.headers.get('x-real-ip') ||
+    'unknown';
+
+  if (!checkRateLimit(ip)) {
+    return Response.json(
+      { error: 'Too many requests. Please wait a moment.' },
+      { status: 429 }
+    );
+  }
+
   let body: {
     courses?: Array<{ code: string; name: string }>;
     assignments?: Array<{
@@ -23,6 +36,10 @@ export async function POST(req: Request) {
       { error: 'assignments and courses arrays are required' },
       { status: 400 }
     );
+  }
+
+  if (body.assignments.length > 200 || body.courses.length > 50) {
+    return Response.json({ error: 'Payload too large' }, { status: 400 });
   }
 
   const now = new Date();
