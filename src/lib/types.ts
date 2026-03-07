@@ -21,6 +21,9 @@ export interface Assignment {
   description: string;
   status: 'todo' | 'in-progress' | 'done';
   estimatedMinutes: number;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt?: string;
 }
 
 export const STORAGE_KEYS = {
