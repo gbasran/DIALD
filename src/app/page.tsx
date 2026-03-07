@@ -56,10 +56,32 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = useState('');
   const [todayName, setTodayName] = useState('');
   const [aiResult, setAiResult] = useState<WhatNowResult | null>(null);
+  const [insights, setInsights] = useState<InsightCard[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [lastChatTime, setLastChatTime] = useState<string>('');
 
   useEffect(() => {
     setGreeting(getGreeting());
     setTodayName(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
+
+    // Read last chat interaction time from localStorage
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.CHAT_HISTORY);
+      if (raw) {
+        const messages: ChatMessage[] = JSON.parse(raw);
+        if (messages.length > 0) {
+          const latest = Math.max(...messages.map(m => m.timestamp));
+          const diff = Date.now() - latest;
+          const minutes = Math.floor(diff / 60000);
+          const hours = Math.floor(diff / 3600000);
+          const days = Math.floor(diff / 86400000);
+          if (days > 0) setLastChatTime(`${days}d ago`);
+          else if (hours > 0) setLastChatTime(`${hours}h ago`);
+          else if (minutes > 0) setLastChatTime(`${minutes}m ago`);
+          else setLastChatTime('just now');
+        }
+      }
+    } catch { /* no chat history */ }
   }, []);
 
   // What Now AI caching logic
@@ -113,6 +135,47 @@ export default function DashboardPage() {
         // Fallback: AI unavailable, aiResult stays null -> use deadline-based
       });
   }, [assignments, courses, assignmentsLoaded, coursesLoaded]);
+
+  // Fetch insights
+  const fetchInsights = useCallback(() => {
+    if (!assignmentsLoaded || !coursesLoaded) return;
+    setInsightsLoading(true);
+    const cMap = new Map(courses.map(c => [c.id, c]));
+    const apiAssignments = assignments.map(a => ({
+      name: a.name,
+      courseCode: cMap.get(a.courseId)?.code || 'Unknown',
+      dueDate: a.dueDate,
+      estimatedMinutes: a.estimatedMinutes,
+      status: a.status,
+    }));
+    const apiCourses = courses.map(c => ({ code: c.code, name: c.name }));
+
+    fetch('/api/insights', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignments: apiAssignments, courses: apiCourses }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
+      .then((data: { insights: InsightCard[] }) => {
+        setInsights(data.insights);
+      })
+      .catch(() => {
+        setInsights([{
+          id: 'fallback',
+          title: 'Keep going',
+          description: 'Keep going -- every study session counts!',
+          type: 'encouragement',
+        }]);
+      })
+      .finally(() => setInsightsLoading(false));
+  }, [assignments, courses, assignmentsLoaded, coursesLoaded]);
+
+  useEffect(() => {
+    fetchInsights();
+  }, [fetchInsights]);
 
   const goalPct = Math.min(Math.round((127 / 150) * 100), 100);
   const maxH = Math.max(...demoHourly, 1);
@@ -398,34 +461,59 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* AI Insights — bigger panel */}
+          {/* Chat with DIALD */}
+          <Link href="/chat" className="glass glow-border rounded-xl p-3.5 flex items-center gap-3 hover:bg-primary/[0.03] transition-colors">
+            <div className="rounded-lg bg-[hsl(var(--focus-purple))]/15 p-2">
+              <MessageSquare className="h-4 w-4 text-[hsl(var(--focus-purple))]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium">Chat with DIALD</p>
+              <p className="text-[10px] text-muted-foreground/60">{lastChatTime || 'No chats yet'}</p>
+            </div>
+            <span className="text-muted-foreground/40 text-xs">&rarr;</span>
+          </Link>
+
+          {/* AI Insights — dynamic panel */}
           <div className="glass glow-border rounded-xl p-3.5 flex-1 min-h-0 flex flex-col border-[hsl(var(--focus-purple))]/10">
-            <div className="flex items-center gap-1.5 mb-3">
-              <Brain className="h-3.5 w-3.5 text-[hsl(var(--focus-purple))]" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--focus-purple))]">AI Insights</span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5">
+                <Brain className="h-3.5 w-3.5 text-[hsl(var(--focus-purple))]" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--focus-purple))]">AI Insights</span>
+              </div>
+              <button
+                onClick={fetchInsights}
+                disabled={insightsLoading}
+                className="rounded-md p-1 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/20 transition-colors disabled:opacity-50"
+                title="Refresh insights"
+              >
+                <RefreshCw className={`h-3 w-3 ${insightsLoading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
             <div className="space-y-3 flex-1">
-              <div className="rounded-lg bg-[hsl(var(--focus-purple))]/[0.06] p-2.5">
-                <p className="text-xs font-medium mb-0.5">Peak Performance Window</p>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  Your focus peaks between 10-11am. Schedule hard tasks there for 2x effectiveness.
-                </p>
-              </div>
-              <div className="rounded-lg bg-primary/[0.06] p-2.5">
-                <p className="text-xs font-medium mb-0.5">Study Strategy</p>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  CS 301 essay is 40% of your grade. Break it into 3 sessions of 45min for best retention.
-                </p>
-              </div>
-              <div className="rounded-lg bg-accent/[0.06] p-2.5">
-                <p className="text-xs font-medium mb-0.5">Streak Alert</p>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  7-day streak! One more week unlocks your personal best. Keep the momentum.
-                </p>
-              </div>
+              {insightsLoading && insights.length === 0 ? (
+                <>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="rounded-lg bg-muted/10 p-2.5 animate-pulse h-[60px]" />
+                  ))}
+                </>
+              ) : (
+                insights.map(insight => {
+                  const bgColor = insight.type === 'deadline'
+                    ? 'bg-[hsl(var(--warning))]/[0.06]'
+                    : insight.type === 'strategy'
+                    ? 'bg-primary/[0.06]'
+                    : 'bg-accent/[0.06]';
+                  return (
+                    <div key={insight.id} className={`rounded-lg ${bgColor} p-2.5`}>
+                      <p className="text-xs font-medium mb-0.5">{insight.title}</p>
+                      <p className="text-[11px] leading-relaxed text-muted-foreground">{insight.description}</p>
+                    </div>
+                  );
+                })
+              )}
             </div>
             <div className="mt-2 h-px bg-border/20" />
-            <p className="mt-1.5 text-[10px] text-muted-foreground/40">Powered by your study patterns -- 14 days of data</p>
+            <p className="mt-1.5 text-[10px] text-muted-foreground/40">Powered by your study patterns</p>
           </div>
 
           {/* Weekly Strategy mini tile */}
