@@ -1,11 +1,16 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { SuggestedPrompts } from '@/components/chat/SuggestedPrompts';
-import { QuickStartTile } from '@/components/chat/QuickStartTile';
 import { ConversationList } from '@/components/chat/ConversationList';
 import type { ChatMessage, Conversation } from '@/lib/types';
+
+export const QUICK_START_MESSAGE = {
+  role: 'assistant' as const,
+  content:
+    "YOOO let's do this!! I'm ready to help you absolutely crush whatever's on your plate. Hit me with your questions, vent about that assignment, or just let me know what's up. No judgment, all vibes. What are we tackling?",
+};
 
 interface ChatLandingProps {
   greeting: ChatMessage | null;
@@ -37,19 +42,24 @@ export function ChatLanding({
         </span>
       </div>
 
-      {/* Greeting + QuickStart side-by-side */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {greeting && (
-          <Card className="border-primary/20 bg-primary/[0.03]">
-            <CardContent className="p-4">
-              <p className="text-sm leading-relaxed text-foreground">
-                {greeting.content}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-        <QuickStartTile onStart={onQuickStart} />
-      </div>
+      {greeting && (
+        <Card className="border-primary/20 bg-primary/[0.03]">
+          <CardContent className="flex items-start gap-4 p-4">
+            <p className="flex-1 text-sm leading-relaxed text-foreground">
+              {greeting.content}
+            </p>
+            <button
+              onClick={onQuickStart}
+              className="group inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 transition-colors hover:bg-primary/20"
+            >
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="font-heading text-sm font-bold text-primary">
+                Let&apos;s Get to Biznesss
+              </span>
+            </button>
+          </CardContent>
+        </Card>
+      )}
 
       <SuggestedPrompts onSelect={onSendPrompt} />
 

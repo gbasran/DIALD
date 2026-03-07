@@ -1,21 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useChat } from '@/hooks/use-chat';
 import { useConversations } from '@/hooks/use-conversations';
 import { ChatLanding } from '@/components/chat/ChatLanding';
 import { ChatConversation } from '@/components/chat/ChatConversation';
 import { ConversationListFull } from '@/components/chat/ConversationListFull';
-import { QUICK_START_MESSAGE } from '@/components/chat/QuickStartTile';
+import { QUICK_START_MESSAGE } from '@/components/chat/ChatLanding';
 import type { ChatMessage } from '@/lib/types';
 
 type ChatView = 'landing' | 'viewAll' | 'conversation';
 
 export default function ChatPage() {
-  const [view, setView] = useState<ChatView>('landing');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const conversationParam = searchParams.get('c');
+
+  const [view, setView] = useState<ChatView>(conversationParam ? 'conversation' : 'landing');
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | undefined
-  >();
+  >(conversationParam ?? undefined);
+
+  // Handle ?c= param changes (e.g. Continue button from nav)
+  useEffect(() => {
+    if (conversationParam) {
+      setSelectedConversationId(conversationParam);
+      setView('conversation');
+    }
+  }, [conversationParam]);
 
   const {
     conversations,
@@ -84,6 +97,7 @@ export default function ChatPage() {
     clearChat();
     setSelectedConversationId(undefined);
     setView('landing');
+    router.replace('/chat');
   };
 
   // View: Full conversation list

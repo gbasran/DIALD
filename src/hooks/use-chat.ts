@@ -35,6 +35,22 @@ function buildStudentContext(
   };
 }
 
+function truncateMessages(msgs: ChatMessage[]): ChatMessage[] {
+  return msgs.length > MAX_MESSAGES ? msgs.slice(-MAX_MESSAGES) : msgs;
+}
+
+function buildGreeting(courses: ReturnType<typeof useCourses>['courses']): string {
+  if (courses.length > 0) {
+    const otherCount = courses.length - 1;
+    const courseRef =
+      otherCount > 0
+        ? `${courses[0].code} and ${otherCount} other course${otherCount !== 1 ? 's' : ''}`
+        : courses[0].code;
+    return `Hey! I'm DIALD, your AI study companion. I can see you're taking ${courseRef} this semester. Ask me anything -- from explaining concepts to planning your study sessions. What's on your mind?`;
+  }
+  return "Hey! I'm DIALD, your AI study companion. Add some courses and I'll help you stay on top of everything. What's on your mind?";
+}
+
 export function useChat(conversationId?: string) {
   const {
     conversations,
@@ -43,81 +59,44 @@ export function useChat(conversationId?: string) {
     isLoaded: conversationsLoaded,
   } = useConversations();
 
-  const [activeConversationId, setActiveConversationId] = useState<
-    string | null
-  >(conversationId ?? null);
-  const activeConversationRef = useRef<string | null>(
-    conversationId ?? null
-  );
-
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Ref tracks the active conversation ID for use inside async callbacks
+  // where React state would be stale (streaming, fetch handlers).
+  const activeIdRef = useRef<string | null>(conversationId ?? null);
   const abortRef = useRef<AbortController | null>(null);
-  const greetingInjected = useRef(false);
-  const initDone = useRef(false);
+  const initialized = useRef(false);
 
   const { courses } = useCourses();
   const { assignments } = useAssignments();
 
-  // Keep ref in sync
+  // Initialize once: load existing conversation or inject greeting
   useEffect(() => {
-    activeConversationRef.current = activeConversationId;
-  }, [activeConversationId]);
-
-  // Initialize: load existing conversation or create new one
-  useEffect(() => {
-    if (!conversationsLoaded || initDone.current) return;
-    initDone.current = true;
+    if (!conversationsLoaded || initialized.current) return;
+    initialized.current = true;
 
     if (conversationId) {
-      // Load existing conversation
       const existing = conversations.find((c) => c.id === conversationId);
       if (existing) {
         setMessages(existing.messages);
-        setActiveConversationId(conversationId);
-        greetingInjected.current = true; // Skip greeting for resumed conversations
+        activeIdRef.current = conversationId;
       }
-    }
-    // If no conversationId, we'll inject greeting and create conversation on first message or greeting
-    setIsLoaded(true);
-  }, [conversationsLoaded, conversationId, conversations]);
-
-  // Auto-greeting for new conversations (no conversationId provided)
-  useEffect(() => {
-    if (!isLoaded || greetingInjected.current) return;
-    if (messages.length > 0) {
-      greetingInjected.current = true;
-      return;
-    }
-    // Only inject greeting for new conversations (no conversationId)
-    if (conversationId) return;
-
-    greetingInjected.current = true;
-
-    let greeting: string;
-    if (courses.length > 0) {
-      const otherCount = courses.length - 1;
-      const courseRef =
-        otherCount > 0
-          ? `${courses[0].code} and ${otherCount} other course${otherCount !== 1 ? 's' : ''}`
-          : courses[0].code;
-      greeting = `Hey! I'm DIALD, your AI study companion. I can see you're taking ${courseRef} this semester. Ask me anything -- from explaining concepts to planning your study sessions. What's on your mind?`;
     } else {
-      greeting =
-        "Hey! I'm DIALD, your AI study companion. Add some courses and I'll help you stay on top of everything. What's on your mind?";
+      // New conversation — inject greeting
+      const greetingMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: buildGreeting(courses),
+        timestamp: Date.now(),
+      };
+      setMessages([greetingMessage]);
     }
 
-    const greetingMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: greeting,
-      timestamp: Date.now(),
-    };
-
-    setMessages([greetingMessage]);
-  }, [isLoaded, messages.length, courses, conversationId]);
+    setIsLoaded(true);
+  }, [conversationsLoaded, conversationId, conversations, courses]);
 
   // Abort on unmount
   useEffect(() => {
@@ -128,7 +107,6 @@ export function useChat(conversationId?: string) {
 
   const sendMessage = useCallback(
     async (content: string) => {
-      // Abort any in-progress stream
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -140,24 +118,17 @@ export function useChat(conversationId?: string) {
         timestamp: Date.now(),
       };
 
-      // If no active conversation yet, create one with greeting + user message
-      let currentId = activeConversationRef.current;
+      // Create conversation on first user message if none exists
+      let currentId = activeIdRef.current;
       if (!currentId) {
         const initialMessages = [...messages, userMessage];
         currentId = createConversation(initialMessages);
-        setActiveConversationId(currentId);
-        activeConversationRef.current = currentId;
+        activeIdRef.current = currentId;
       }
 
       const capturedId = currentId;
 
-      setMessages((prev) => {
-        const updated = [...prev, userMessage];
-        return updated.length > MAX_MESSAGES
-          ? updated.slice(-MAX_MESSAGES)
-          : updated;
-      });
-
+      setMessages((prev) => truncateMessages([...prev, userMessage]));
       setIsStreaming(true);
       setError(null);
 
@@ -184,8 +155,7 @@ export function useChat(conversationId?: string) {
               : `Error: ${response.statusText}`;
           setError(errorText);
           setIsStreaming(false);
-          // Still save what we have
-          if (activeConversationRef.current === capturedId) {
+          if (activeIdRef.current === capturedId) {
             updateConversation(capturedId, [...messages, userMessage]);
           }
           return;
@@ -202,31 +172,19 @@ export function useChat(conversationId?: string) {
         const decoder = new TextDecoder();
         let accumulated = '';
 
-        // Add placeholder assistant message
-        setMessages((prev) => {
-          const updated = [
+        setMessages((prev) =>
+          truncateMessages([
             ...prev,
-            {
-              id: assistantId,
-              role: 'assistant' as const,
-              content: '',
-              timestamp: Date.now(),
-            },
-          ];
-          return updated.length > MAX_MESSAGES
-            ? updated.slice(-MAX_MESSAGES)
-            : updated;
-        });
+            { id: assistantId, role: 'assistant', content: '', timestamp: Date.now() },
+          ])
+        );
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-
-          // Guard: if user switched conversations mid-stream, discard
-          if (activeConversationRef.current !== capturedId) break;
+          if (activeIdRef.current !== capturedId) break;
 
           accumulated += decoder.decode(value, { stream: true });
-
           const currentContent = accumulated;
           setMessages((prev) =>
             prev.map((m) =>
@@ -236,21 +194,20 @@ export function useChat(conversationId?: string) {
         }
 
         // Finalize and persist
-        if (activeConversationRef.current === capturedId) {
+        if (activeIdRef.current === capturedId) {
           setMessages((prev) => {
             const finalized = prev.map((m) =>
               m.id === assistantId
                 ? { ...m, content: accumulated, timestamp: Date.now() }
                 : m
             );
-            // Persist to conversation storage
             updateConversation(capturedId, finalized);
             return finalized;
           });
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
-          // Request was aborted, not an error
+          // Request was aborted — not an error
         } else {
           setError('Failed to send message. Please try again.');
         }
@@ -263,13 +220,10 @@ export function useChat(conversationId?: string) {
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
-    // Start a new conversation without deleting anything
     setMessages([]);
-    setActiveConversationId(null);
-    activeConversationRef.current = null;
+    activeIdRef.current = null;
     setError(null);
-    greetingInjected.current = false;
-    initDone.current = false;
+    initialized.current = false;
   }, []);
 
   const retryLast = useCallback(async () => {
@@ -295,6 +249,6 @@ export function useChat(conversationId?: string) {
     clearChat,
     retryLast,
     isLoaded,
-    activeConversationId,
+    activeConversationId: activeIdRef.current,
   };
 }

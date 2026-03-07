@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { STORAGE_KEYS } from '@/lib/types';
 import type { Conversation, ChatMessage } from '@/lib/types';
@@ -45,11 +45,11 @@ export function useConversations() {
     [setConversationsRaw]
   );
 
-  // Sorted by updatedAt descending
-  const sorted = [...conversations].sort(
-    (a, b) => b.updatedAt - a.updatedAt
+  const sorted = useMemo(
+    () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
+    [conversations]
   );
-  const recentConversations = sorted.slice(0, 3);
+  const recentConversations = useMemo(() => sorted.slice(0, 3), [sorted]);
 
   // Migration: move old CHAT_HISTORY data to new format
   useEffect(() => {
