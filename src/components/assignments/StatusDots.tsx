@@ -33,16 +33,21 @@ export function StatusDots({
       {STATUSES.map((s) => {
         const isActive = s.value === status;
         return (
-          <button
+          <span
             key={s.value}
-            type="button"
             role="radio"
+            tabIndex={interactive ? 0 : undefined}
             aria-checked={isActive}
             aria-label={s.label}
-            disabled={!interactive}
             onClick={() => {
               if (interactive && onStatusChange && s.value !== status) {
                 onStatusChange(s.value);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (interactive && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                if (onStatusChange && s.value !== status) onStatusChange(s.value);
               }
             }}
             className={`rounded-full transition-all ${sizeClass} ${s.color} ${

@@ -11,9 +11,10 @@ interface WeeklyTimelineProps {
   courses: Course[];
   onStatusChange: (id: string, status: Assignment['status']) => void;
   onEdit: (assignment: Assignment) => void;
+  maxPerDay?: number;
 }
 
-const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function getMonday(d: Date): Date {
   const date = new Date(d);
@@ -34,15 +35,15 @@ function isSameDay(a: Date, b: Date): boolean {
 }
 
 function formatWeekRange(monday: Date): string {
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
 
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
   const monStr = monday.toLocaleDateString('en-US', opts);
-  const friStr = friday.toLocaleDateString('en-US', opts);
-  const year = friday.getFullYear();
+  const sunStr = sunday.toLocaleDateString('en-US', opts);
+  const year = sunday.getFullYear();
 
-  return `${monStr} – ${friStr}, ${year}`;
+  return `${monStr} – ${sunStr}, ${year}`;
 }
 
 const STATUS_ORDER: Record<Assignment['status'], number> = {
@@ -56,6 +57,7 @@ export function WeeklyTimeline({
   courses,
   onStatusChange,
   onEdit,
+  maxPerDay,
 }: WeeklyTimelineProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date | null>(null);
 
@@ -65,8 +67,8 @@ export function WeeklyTimeline({
 
   if (!currentWeekStart) {
     return (
-      <div className="grid grid-cols-5 gap-2">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-7 gap-2">
+        {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="h-48 rounded-lg bg-muted animate-pulse" />
         ))}
       </div>
@@ -76,8 +78,8 @@ export function WeeklyTimeline({
   const today = new Date();
   const isCurrentWeek = isSameDay(getMonday(today), currentWeekStart);
 
-  // Build the 5 days (Mon-Fri)
-  const days = Array.from({ length: 5 }).map((_, i) => {
+  // Build the 7 days (Mon-Sun)
+  const days = Array.from({ length: 7 }).map((_, i) => {
     const date = new Date(currentWeekStart);
     date.setDate(currentWeekStart.getDate() + i);
     return date;
@@ -151,7 +153,7 @@ export function WeeklyTimeline({
           type="button"
           onClick={goToToday}
           className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors ${
-            !isCurrentWeek
+            isCurrentWeek
               ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
@@ -162,7 +164,7 @@ export function WeeklyTimeline({
       </div>
 
       {/* Timeline grid */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-7 gap-2">
         {days.map((day, i) => {
           const isToday = isSameDay(day, today);
           const items = dayAssignments[i];
@@ -199,7 +201,7 @@ export function WeeklyTimeline({
                     No assignments
                   </p>
                 )}
-                {items.map((assignment) => {
+                {(maxPerDay ? items.slice(0, maxPerDay) : items).map((assignment) => {
                   const course = courseMap.get(assignment.courseId);
                   return (
                     <button
@@ -248,6 +250,11 @@ export function WeeklyTimeline({
                     </button>
                   );
                 })}
+                {maxPerDay && items.length > maxPerDay && (
+                  <p className="text-xs text-muted-foreground text-center font-medium">
+                    +{items.length - maxPerDay} more due
+                  </p>
+                )}
               </div>
             </div>
           );
