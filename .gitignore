@@ -43,5 +43,7 @@ next-env.d.ts
 # planning
 .planning/
 
-# claude
+# ai agent tooling
 CLAUDE.md
+screenshot.mjs
+temporary screenshots/
