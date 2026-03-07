@@ -15,9 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import { AssignmentForm } from '@/components/assignments/AssignmentForm';
 import { AssignmentList } from '@/components/assignments/AssignmentList';
+import { WeeklyTimeline } from '@/components/assignments/WeeklyTimeline';
 import { STORAGE_KEYS } from '@/lib/types';
 import type { Assignment } from '@/lib/types';
-import { Plus, Database, BookOpen } from 'lucide-react';
+import { Plus, Database, BookOpen, LayoutGrid, List } from 'lucide-react';
 
 export function AssignmentsContent() {
   const {
@@ -34,6 +35,7 @@ export function AssignmentsContent() {
     loadDemoData: loadDemoCourses,
   } = useCourses();
 
+  const [viewMode, setViewMode] = useState<'timeline' | 'list'>('timeline');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
 
@@ -105,19 +107,49 @@ export function AssignmentsContent() {
           <h2 className="font-heading text-2xl font-bold">Assignments</h2>
           <p className="text-muted-foreground">Manage your tasks</p>
         </div>
-        <div className="flex gap-2">
-          {assignments.length === 0 && (
-            <Button variant="secondary" onClick={handleLoadDemoData}>
-              <Database className="h-4 w-4 mr-1" />
-              Load Demo Data
-            </Button>
+        <div className="flex items-center gap-3">
+          {(courses.length > 0 || assignments.length > 0) && (
+            <div className="flex gap-0.5 rounded-lg border p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode('timeline')}
+                className={`rounded-md p-1.5 transition-colors ${
+                  viewMode === 'timeline'
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                aria-label="Timeline view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`rounded-md p-1.5 transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                aria-label="List view"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
           )}
-          {courses.length > 0 && (
-            <Button onClick={handleOpenAdd}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add Assignment
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {assignments.length === 0 && (
+              <Button variant="secondary" onClick={handleLoadDemoData}>
+                <Database className="h-4 w-4 mr-1" />
+                Load Demo Data
+              </Button>
+            )}
+            {courses.length > 0 && (
+              <Button onClick={handleOpenAdd}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add Assignment
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -138,7 +170,16 @@ export function AssignmentsContent() {
         </div>
       )}
 
-      {(courses.length > 0 || assignments.length > 0) && (
+      {(courses.length > 0 || assignments.length > 0) && viewMode === 'timeline' && (
+        <WeeklyTimeline
+          assignments={assignments}
+          courses={courses}
+          onStatusChange={handleStatusChange}
+          onEdit={handleEdit}
+        />
+      )}
+
+      {(courses.length > 0 || assignments.length > 0) && viewMode === 'list' && (
         <AssignmentList
           assignments={assignments}
           courses={courses}
