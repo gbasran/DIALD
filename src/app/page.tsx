@@ -1,11 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { BookOpen, Clock, Target, TrendingUp, Flame, Sparkles, ArrowRight, Zap, Brain } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { BookOpen, Clock, Target, TrendingUp, Flame, Zap, Brain, RefreshCw, MessageSquare } from 'lucide-react';
 import { useCourses } from '@/hooks/use-courses';
 import { useAssignments } from '@/hooks/use-assignments';
 import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, getGreeting } from '@/lib/utils';
-import type { ClassTime } from '@/lib/types';
+import { WhatNowCard } from '@/components/dashboard/WhatNowCard';
+import { STORAGE_KEYS } from '@/lib/types';
+import type { ClassTime, WhatNowResult, InsightCard, ChatMessage } from '@/lib/types';
+
+const WHATNOW_CACHE_KEY = 'diald-whatnow-cache';
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+interface WhatNowCache {
+  result: WhatNowResult;
+  cachedAt: number;
+  assignmentHash: string;
+}
+
+function computeAssignmentHash(assignments: Array<{ id: string; status: string }>): string {
+  return assignments
+    .filter(a => a.status !== 'done')
+    .map(a => `${a.id}:${a.status}`)
+    .sort()
+    .join('|');
+}
 
 // Demo data (kept for panels not yet wired to real data)
 const demoActivity = [
@@ -35,11 +55,64 @@ export default function DashboardPage() {
   const { assignments, isLoaded: assignmentsLoaded } = useAssignments();
   const [greeting, setGreeting] = useState('');
   const [todayName, setTodayName] = useState('');
+  const [aiResult, setAiResult] = useState<WhatNowResult | null>(null);
 
   useEffect(() => {
     setGreeting(getGreeting());
     setTodayName(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
   }, []);
+
+  // What Now AI caching logic
+  useEffect(() => {
+    if (!assignmentsLoaded || !coursesLoaded) return;
+    const hash = computeAssignmentHash(assignments);
+
+    // Check cache
+    try {
+      const raw = localStorage.getItem(WHATNOW_CACHE_KEY);
+      if (raw) {
+        const cache: WhatNowCache = JSON.parse(raw);
+        if (cache.assignmentHash === hash && Date.now() - cache.cachedAt < CACHE_TTL) {
+          setAiResult(cache.result);
+          return;
+        }
+      }
+    } catch { /* invalid cache, refetch */ }
+
+    // Build context for API
+    const courseMap = new Map(courses.map(c => [c.id, c]));
+    const apiAssignments = assignments.map(a => ({
+      id: a.id,
+      name: a.name,
+      courseCode: courseMap.get(a.courseId)?.code || 'Unknown',
+      dueDate: a.dueDate,
+      estimatedMinutes: a.estimatedMinutes,
+      status: a.status,
+    }));
+    const apiCourses = courses.map(c => ({
+      code: c.code,
+      name: c.name,
+      schedule: c.schedule.map(s => ({ day: s.day, startTime: s.startTime, endTime: s.endTime })),
+    }));
+
+    fetch('/api/whatnow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignments: apiAssignments, courses: apiCourses }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
+      .then((result: WhatNowResult) => {
+        setAiResult(result);
+        const cache: WhatNowCache = { result, cachedAt: Date.now(), assignmentHash: hash };
+        localStorage.setItem(WHATNOW_CACHE_KEY, JSON.stringify(cache));
+      })
+      .catch(() => {
+        // Fallback: AI unavailable, aiResult stays null -> use deadline-based
+      });
+  }, [assignments, courses, assignmentsLoaded, coursesLoaded]);
 
   const goalPct = Math.min(Math.round((127 / 150) * 100), 100);
   const maxH = Math.max(...demoHourly, 1);
@@ -183,30 +256,13 @@ export default function DashboardPage() {
 
         {/* ── CENTER COLUMN ── */}
         <div className="flex flex-col gap-2.5 min-h-0">
-          {/* What Now */}
-          <div className="glass glow-border rounded-xl border-primary/20 bg-primary/[0.03] p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">Suggested Next</span>
-                </div>
-                <h3 className="font-heading text-base font-bold leading-snug tracking-tight">
-                  {mostUrgent ? mostUrgent.name : 'All caught up!'}
-                </h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {mostUrgent
-                    ? `${courseMap.get(mostUrgent.courseId)?.code || 'Unknown'} -- ${formatRelativeDate(mostUrgent.dueDate)}`
-                    : 'No pending assignments. Time to get ahead or take a break.'}
-                </p>
-              </div>
-              {mostUrgent && (
-                <button className="ml-3 shrink-0 flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">
-                  Start <ArrowRight className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          </div>
+          {/* What Now — AI-powered or deadline fallback */}
+          <WhatNowCard
+            task={aiResult?.task || (mostUrgent ? mostUrgent.name : 'All caught up!')}
+            course={aiResult?.courseCode || (mostUrgent ? (courseMap.get(mostUrgent.courseId)?.code || 'Unknown') : '')}
+            reason={aiResult?.reason || (mostUrgent ? `Due soonest -- ${formatRelativeDate(mostUrgent.dueDate)}` : 'No pending assignments. Time to get ahead or take a break.')}
+            className="glass glow-border"
+          />
 
           {/* This Week — weekly schedule view */}
           <div className="glass glow-border rounded-xl p-3.5 flex-1 min-h-0 flex flex-col">

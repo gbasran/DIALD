@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -27,9 +28,11 @@ export function WhatNowCard({ task, course, reason, className }: WhatNowCardProp
             <p className="mt-1 text-sm text-muted-foreground">{course}</p>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground/80">{reason}</p>
           </div>
-          <Button size="sm" className="ml-4 shrink-0 gap-1.5 rounded-lg">
-            Start
-            <ArrowRight className="h-3.5 w-3.5" />
+          <Button size="sm" className="ml-4 shrink-0 gap-1.5 rounded-lg" asChild>
+            <Link href="/focus">
+              Start
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </Button>
         </div>
       </CardContent>
