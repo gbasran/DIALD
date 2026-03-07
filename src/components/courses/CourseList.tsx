@@ -1,8 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import type { Course, ClassTime } from '@/lib/types';
 import { MapPin, Clock, Pencil, Trash2 } from 'lucide-react';
 
@@ -20,6 +28,13 @@ const DAY_ABBREV: Record<ClassTime['day'], string> = {
   Friday: 'F',
 };
 
+function formatTime(time24: string): string {
+  const [h, m] = time24.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+}
+
 function formatSchedule(schedule: ClassTime[]): string[] {
   // Group by time range, collect day abbreviations
   const groups: Record<string, string[]> = {};
@@ -29,11 +44,16 @@ function formatSchedule(schedule: ClassTime[]): string[] {
     groups[timeKey].push(DAY_ABBREV[slot.day]);
   }
   return Object.entries(groups).map(
-    ([time, days]) => `${days.join('')} ${time}`
+    ([time, days]) => {
+      const [start, end] = time.split('-');
+      return `${days.join('')} ${formatTime(start)}–${formatTime(end)}`;
+    }
   );
 }
 
 export function CourseList({ courses, onEdit, onDelete }: CourseListProps) {
+  const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
+
   if (courses.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center animate-fade-in">
@@ -79,7 +99,7 @@ export function CourseList({ courses, onEdit, onDelete }: CourseListProps) {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => onDelete(course.id)}
+                    onClick={() => setDeletingCourse(course)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -104,6 +124,34 @@ export function CourseList({ courses, onEdit, onDelete }: CourseListProps) {
           </div>
         </Card>
       ))}
+      <Dialog open={!!deletingCourse} onOpenChange={() => setDeletingCourse(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Course</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-foreground">
+                {deletingCourse?.code} — {deletingCourse?.name}
+              </span>
+              ? This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeletingCourse(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deletingCourse) onDelete(deletingCourse.id);
+                setDeletingCourse(null);
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
