@@ -32,6 +32,44 @@ export const STORAGE_KEYS = {
   SETTINGS: 'diald-settings',
 } as const;
 
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+export interface StudentContext {
+  courses: Array<{
+    code: string;
+    name: string;
+    schedule: Array<{ day: string; startTime: string; endTime: string }>;
+    location: string;
+  }>;
+  assignments: Array<{
+    id: string;
+    name: string;
+    courseCode: string;
+    dueDate: string;
+    estimatedMinutes: number;
+    status: string;
+  }>;
+}
+
+export interface WhatNowResult {
+  assignmentId: string;
+  task: string;
+  courseCode: string;
+  reason: string;
+}
+
+export interface InsightCard {
+  id: string;
+  title: string;
+  description: string;
+  type: 'deadline' | 'strategy' | 'encouragement';
+}
+
 export const COURSE_COLORS = [
   'hsl(199, 70%, 50%)',   // Calm blue
   'hsl(160, 45%, 45%)',   // Soft green
