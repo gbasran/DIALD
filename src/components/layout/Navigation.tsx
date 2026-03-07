@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, BookOpen, ClipboardList, MessageSquare, Timer, Zap, Shield, Plus, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { STORAGE_KEYS } from '@/lib/types';
+import type { Conversation } from '@/lib/types';
 
 const navItems = [
   {
@@ -57,10 +58,10 @@ export function Navigation() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CHAT_HISTORY);
+      const raw = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
       if (raw) {
-        const messages = JSON.parse(raw);
-        setHasChatHistory(messages.some((m: { role: string }) => m.role === 'user'));
+        const convos: Conversation[] = JSON.parse(raw);
+        setHasChatHistory(convos.length > 0);
       } else {
         setHasChatHistory(false);
       }
@@ -133,9 +134,7 @@ export function Navigation() {
                   <div className="mt-auto grid grid-cols-2 gap-px bg-border/30">
                     <button
                       onClick={() => {
-                        localStorage.removeItem(STORAGE_KEYS.CHAT_HISTORY);
-                        setHasChatHistory(false);
-                        window.location.href = '/chat';
+                        router.push('/chat');
                       }}
                       className="flex items-center justify-center gap-1 bg-background/50 px-2 py-1.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/[0.08]"
                     >

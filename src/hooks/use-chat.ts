@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useCourses } from '@/hooks/use-courses';
 import { useAssignments } from '@/hooks/use-assignments';
-import { STORAGE_KEYS } from '@/lib/types';
+import { useConversations } from '@/hooks/use-conversations';
 import type { ChatMessage, StudentContext } from '@/lib/types';
 
 const MAX_MESSAGES = 100;
@@ -36,26 +35,64 @@ function buildStudentContext(
   };
 }
 
-export function useChat() {
-  const [messages, setMessages, isLoaded] = useLocalStorage<ChatMessage[]>(
-    STORAGE_KEYS.CHAT_HISTORY,
-    []
+export function useChat(conversationId?: string) {
+  const {
+    conversations,
+    createConversation,
+    updateConversation,
+    isLoaded: conversationsLoaded,
+  } = useConversations();
+
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(conversationId ?? null);
+  const activeConversationRef = useRef<string | null>(
+    conversationId ?? null
   );
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const greetingInjected = useRef(false);
+  const initDone = useRef(false);
 
   const { courses } = useCourses();
   const { assignments } = useAssignments();
 
-  // Auto-greeting on first visit (no API call)
+  // Keep ref in sync
+  useEffect(() => {
+    activeConversationRef.current = activeConversationId;
+  }, [activeConversationId]);
+
+  // Initialize: load existing conversation or create new one
+  useEffect(() => {
+    if (!conversationsLoaded || initDone.current) return;
+    initDone.current = true;
+
+    if (conversationId) {
+      // Load existing conversation
+      const existing = conversations.find((c) => c.id === conversationId);
+      if (existing) {
+        setMessages(existing.messages);
+        setActiveConversationId(conversationId);
+        greetingInjected.current = true; // Skip greeting for resumed conversations
+      }
+    }
+    // If no conversationId, we'll inject greeting and create conversation on first message or greeting
+    setIsLoaded(true);
+  }, [conversationsLoaded, conversationId, conversations]);
+
+  // Auto-greeting for new conversations (no conversationId provided)
   useEffect(() => {
     if (!isLoaded || greetingInjected.current) return;
     if (messages.length > 0) {
       greetingInjected.current = true;
       return;
     }
+    // Only inject greeting for new conversations (no conversationId)
+    if (conversationId) return;
 
     greetingInjected.current = true;
 
@@ -80,7 +117,7 @@ export function useChat() {
     };
 
     setMessages([greetingMessage]);
-  }, [isLoaded, messages.length, courses, setMessages]);
+  }, [isLoaded, messages.length, courses, conversationId]);
 
   // Abort on unmount
   useEffect(() => {
@@ -102,6 +139,17 @@ export function useChat() {
         content,
         timestamp: Date.now(),
       };
+
+      // If no active conversation yet, create one with greeting + user message
+      let currentId = activeConversationRef.current;
+      if (!currentId) {
+        const initialMessages = [...messages, userMessage];
+        currentId = createConversation(initialMessages);
+        setActiveConversationId(currentId);
+        activeConversationRef.current = currentId;
+      }
+
+      const capturedId = currentId;
 
       setMessages((prev) => {
         const updated = [...prev, userMessage];
@@ -136,6 +184,10 @@ export function useChat() {
               : `Error: ${response.statusText}`;
           setError(errorText);
           setIsStreaming(false);
+          // Still save what we have
+          if (activeConversationRef.current === capturedId) {
+            updateConversation(capturedId, [...messages, userMessage]);
+          }
           return;
         }
 
@@ -170,9 +222,11 @@ export function useChat() {
           const { done, value } = await reader.read();
           if (done) break;
 
+          // Guard: if user switched conversations mid-stream, discard
+          if (activeConversationRef.current !== capturedId) break;
+
           accumulated += decoder.decode(value, { stream: true });
 
-          // Update streaming message content
           const currentContent = accumulated;
           setMessages((prev) =>
             prev.map((m) =>
@@ -181,14 +235,19 @@ export function useChat() {
           );
         }
 
-        // Finalize
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, content: accumulated, timestamp: Date.now() }
-              : m
-          )
-        );
+        // Finalize and persist
+        if (activeConversationRef.current === capturedId) {
+          setMessages((prev) => {
+            const finalized = prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: accumulated, timestamp: Date.now() }
+                : m
+            );
+            // Persist to conversation storage
+            updateConversation(capturedId, finalized);
+            return finalized;
+          });
+        }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
           // Request was aborted, not an error
@@ -199,18 +258,21 @@ export function useChat() {
         setIsStreaming(false);
       }
     },
-    [messages, courses, assignments, setMessages]
+    [messages, courses, assignments, createConversation, updateConversation]
   );
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
+    // Start a new conversation without deleting anything
     setMessages([]);
+    setActiveConversationId(null);
+    activeConversationRef.current = null;
     setError(null);
     greetingInjected.current = false;
-  }, [setMessages]);
+    initDone.current = false;
+  }, []);
 
   const retryLast = useCallback(async () => {
-    // Find the last user message
     const lastUserIndex = [...messages]
       .reverse()
       .findIndex((m) => m.role === 'user');
@@ -219,13 +281,11 @@ export function useChat() {
     const actualIndex = messages.length - 1 - lastUserIndex;
     const lastUserMessage = messages[actualIndex];
 
-    // Remove messages from the last user message onward
     setMessages((prev) => prev.slice(0, actualIndex));
     setError(null);
 
-    // Re-send
     await sendMessage(lastUserMessage.content);
-  }, [messages, setMessages, sendMessage]);
+  }, [messages, sendMessage]);
 
   return {
     messages,
@@ -235,5 +295,6 @@ export function useChat() {
     clearChat,
     retryLast,
     isLoaded,
+    activeConversationId,
   };
 }

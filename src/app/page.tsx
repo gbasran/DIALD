@@ -9,7 +9,7 @@ import { useAssignments } from '@/hooks/use-assignments';
 import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, getGreeting } from '@/lib/utils';
 import { WhatNowCard } from '@/components/dashboard/WhatNowCard';
 import { STORAGE_KEYS } from '@/lib/types';
-import type { ClassTime, WhatNowResult, InsightCard, ChatMessage } from '@/lib/types';
+import type { ClassTime, WhatNowResult, InsightCard, Conversation } from '@/lib/types';
 
 const WHATNOW_CACHE_KEY = 'diald-whatnow-cache';
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
@@ -68,11 +68,11 @@ export default function DashboardPage() {
 
     // Read last chat interaction time from localStorage
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CHAT_HISTORY);
+      const raw = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
       if (raw) {
-        const messages: ChatMessage[] = JSON.parse(raw);
-        if (messages.length > 0) {
-          const latest = Math.max(...messages.map(m => m.timestamp));
+        const convos: Conversation[] = JSON.parse(raw);
+        if (convos.length > 0) {
+          const latest = Math.max(...convos.map(c => c.updatedAt));
           const diff = Date.now() - latest;
           const minutes = Math.floor(diff / 60000);
           const hours = Math.floor(diff / 3600000);
@@ -479,8 +479,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-px bg-border/30">
               <button
                 onClick={() => {
-                  localStorage.removeItem(STORAGE_KEYS.CHAT_HISTORY);
-                  window.location.href = '/chat';
+                  router.push('/chat');
                 }}
                 className="flex items-center justify-center gap-1.5 bg-background px-3 py-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/[0.06]"
               >
