@@ -9,17 +9,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import { StatusDots } from '@/components/assignments/StatusDots';
 import type { Assignment, Course } from '@/lib/types';
 import { getUrgencyColor, getUrgencyBorder, formatRelativeDate } from '@/lib/utils';
-import { Pencil, Trash2, Circle, Check, Clock } from 'lucide-react';
+import { Pencil, Trash2, Clock } from 'lucide-react';
 
 interface AssignmentListProps {
   assignments: Assignment[];
   courses: Course[];
   onEdit: (assignment: Assignment) => void;
   onDelete: (id: string) => void;
-  onToggleComplete: (assignment: Assignment) => void;
+  onStatusChange: (id: string, status: Assignment['status']) => void;
 }
 
 const CELEBRATION_MESSAGES = [
@@ -35,7 +35,7 @@ export function AssignmentList({
   courses,
   onEdit,
   onDelete,
-  onToggleComplete,
+  onStatusChange,
 }: AssignmentListProps) {
   const [deletingAssignment, setDeletingAssignment] = useState<Assignment | null>(null);
   const [celebratingId, setCelebratingId] = useState<string | null>(null);
@@ -52,24 +52,30 @@ export function AssignmentList({
     }
   }, [celebratingId, clearCelebration]);
 
-  function handleToggle(assignment: Assignment) {
-    if (assignment.status !== 'done') {
+  function handleStatusChange(assignment: Assignment, newStatus: Assignment['status']) {
+    if (newStatus === 'done' && assignment.status !== 'done') {
       setCelebratingId(assignment.id);
       setCelebrationMsg(
         CELEBRATION_MESSAGES[Math.floor(Math.random() * CELEBRATION_MESSAGES.length)]
       );
     }
-    onToggleComplete(assignment);
+    onStatusChange(assignment.id, newStatus);
   }
 
   function getCourse(courseId: string) {
     return courses.find((c) => c.id === courseId);
   }
 
-  // Sort: incomplete first (by due date ascending), then completed
+  // Sort: in-progress first (by due date), then todo (by due date), then done (by due date)
+  const statusOrder: Record<Assignment['status'], number> = {
+    'in-progress': 0,
+    'todo': 1,
+    'done': 2,
+  };
+
   const sorted = [...assignments].sort((a, b) => {
-    if (a.status === 'done' && b.status !== 'done') return 1;
-    if (a.status !== 'done' && b.status === 'done') return -1;
+    const orderDiff = statusOrder[a.status] - statusOrder[b.status];
+    if (orderDiff !== 0) return orderDiff;
     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
   });
 
@@ -91,32 +97,31 @@ export function AssignmentList({
       {sorted.map((assignment) => {
         const course = getCourse(assignment.courseId);
         const isDone = assignment.status === 'done';
+        const isInProgress = assignment.status === 'in-progress';
         const isCelebrating = celebratingId === assignment.id;
+
+        const borderClass = isDone
+          ? 'border-l-muted-foreground'
+          : isInProgress
+          ? 'border-l-amber-400'
+          : getUrgencyBorder(assignment.dueDate);
 
         return (
           <div
             key={assignment.id}
-            className={`glass glow-border rounded-xl border-l-[3px] ${
-              isDone ? 'border-l-muted-foreground opacity-60' : getUrgencyBorder(assignment.dueDate)
+            className={`glass glow-border rounded-xl border-l-[3px] ${borderClass} ${
+              isDone ? 'opacity-60' : ''
             } relative overflow-hidden`}
             style={{ animation: 'card-enter 0.3s ease-out' }}
           >
             <div className="flex items-start gap-3 p-4">
-              {/* Complete toggle */}
-              <button
-                type="button"
-                onClick={() => handleToggle(assignment)}
-                className="mt-0.5 shrink-0 transition-colors"
-                aria-label={isDone ? 'Mark as incomplete' : 'Mark as complete'}
-              >
-                {isDone ? (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20">
-                    <Check className="h-3.5 w-3.5 text-accent" />
-                  </div>
-                ) : (
-                  <Circle className="h-6 w-6 text-muted-foreground/40 hover:text-primary" />
-                )}
-              </button>
+              {/* Status dots */}
+              <div className="mt-1 shrink-0">
+                <StatusDots
+                  status={assignment.status}
+                  onStatusChange={(newStatus) => handleStatusChange(assignment, newStatus)}
+                />
+              </div>
 
               {/* Content */}
               <div className="min-w-0 flex-1">
@@ -161,11 +166,6 @@ export function AssignmentList({
                     <Clock className="h-3 w-3" />
                     {assignment.estimatedMinutes}min
                   </span>
-                  {assignment.status === 'in-progress' && (
-                    <Badge variant="secondary" className="text-[10px]">
-                      In Progress
-                    </Badge>
-                  )}
                 </div>
               </div>
             </div>

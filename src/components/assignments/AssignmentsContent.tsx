@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { AssignmentForm } from '@/components/assignments/AssignmentForm';
 import { AssignmentList } from '@/components/assignments/AssignmentList';
+import { STORAGE_KEYS } from '@/lib/types';
 import type { Assignment } from '@/lib/types';
 import { Plus, Database, BookOpen } from 'lucide-react';
 
@@ -24,6 +25,7 @@ export function AssignmentsContent() {
     isLoaded: assignmentsLoaded,
     addAssignment,
     updateAssignment,
+    changeStatus,
     deleteAssignment,
   } = useAssignments();
   const {
@@ -60,12 +62,8 @@ export function AssignmentsContent() {
     setEditingAssignment(null);
   }
 
-  function handleToggleComplete(assignment: Assignment) {
-    if (assignment.status === 'done') {
-      updateAssignment(assignment.id, { status: 'todo' });
-    } else {
-      updateAssignment(assignment.id, { status: 'done' });
-    }
+  function handleStatusChange(id: string, status: Assignment['status']) {
+    changeStatus(id, status);
   }
 
   async function handleLoadDemoData() {
@@ -75,7 +73,7 @@ export function AssignmentsContent() {
       await loadDemoCourses();
       // We need to wait for the courses to be available.
       // Since loadDemoData sets state, we read from localStorage directly.
-      const stored = localStorage.getItem('diald-courses');
+      const stored = localStorage.getItem(STORAGE_KEYS.COURSES);
       if (stored) {
         const parsed = JSON.parse(stored) as { id: string }[];
         courseIds = parsed.map((c) => c.id);
@@ -146,7 +144,7 @@ export function AssignmentsContent() {
           courses={courses}
           onEdit={handleEdit}
           onDelete={deleteAssignment}
-          onToggleComplete={handleToggleComplete}
+          onStatusChange={handleStatusChange}
         />
       )}
 
