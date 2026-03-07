@@ -2,16 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { StatusDots } from '@/components/assignments/StatusDots';
 import type { Assignment, Course } from '@/lib/types';
-import { getUrgencyColor, getUrgencyBorder, formatRelativeDate } from '@/lib/utils';
+import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, sortByStatusThenDueDate } from '@/lib/utils';
 import { Pencil, Trash2, Clock } from 'lucide-react';
 
 interface AssignmentListProps {
@@ -63,19 +57,7 @@ export function AssignmentList({
   }
 
   const courseMap = new Map(courses.map((c) => [c.id, c]));
-
-  // Sort: in-progress first (by due date), then todo (by due date), then done (by due date)
-  const statusOrder: Record<Assignment['status'], number> = {
-    'in-progress': 0,
-    'todo': 1,
-    'done': 2,
-  };
-
-  const sorted = [...assignments].sort((a, b) => {
-    const orderDiff = statusOrder[a.status] - statusOrder[b.status];
-    if (orderDiff !== 0) return orderDiff;
-    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-  });
+  const sorted = sortByStatusThenDueDate(assignments);
 
   if (assignments.length === 0) {
     return (
@@ -107,10 +89,9 @@ export function AssignmentList({
         return (
           <div
             key={assignment.id}
-            className={`glass glow-border rounded-xl border-l-[3px] ${borderClass} ${
+            className={`glass glow-border animate-card-enter rounded-xl border-l-[3px] ${borderClass} ${
               isDone ? 'opacity-60' : ''
             } relative overflow-hidden`}
-            style={{ animation: 'card-enter 0.3s ease-out' }}
           >
             <div className="flex items-start gap-3 p-4">
               {/* Status dots */}
@@ -205,34 +186,21 @@ export function AssignmentList({
       })}
 
       {/* Delete confirmation dialog */}
-      <Dialog open={!!deletingAssignment} onOpenChange={() => setDeletingAssignment(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Assignment</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{' '}
-              <span className="font-semibold text-foreground">
-                {deletingAssignment?.name}
-              </span>
-              ? This can&apos;t be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setDeletingAssignment(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (deletingAssignment) onDelete(deletingAssignment.id);
-                setDeletingAssignment(null);
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={!!deletingAssignment}
+        onOpenChange={() => setDeletingAssignment(null)}
+        onConfirm={() => { if (deletingAssignment) onDelete(deletingAssignment.id); }}
+        title="Delete Assignment"
+        description={
+          <>
+            Are you sure you want to delete{' '}
+            <span className="font-semibold text-foreground">
+              {deletingAssignment?.name}
+            </span>
+            ? This can&apos;t be undone.
+          </>
+        }
+      />
     </div>
   );
 }

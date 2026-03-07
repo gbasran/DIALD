@@ -166,7 +166,7 @@ export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps)
         <Label>Schedule</Label>
         <div className="space-y-2">
           {schedule.map((slot, index) => (
-            <div key={index} className={`flex items-center gap-2 ${conflicts.has(index) ? 'rounded-md ring-2 ring-red-500/50 p-1 -m-1' : ''}`}>
+            <div key={`${slot.day}-${slot.startTime}-${slot.endTime}-${index}`} className={`flex items-center gap-2 ${conflicts.has(index) ? 'rounded-md ring-2 ring-red-500/50 p-1 -m-1' : ''}`}>
               <select
                 value={slot.day}
                 onChange={(e) =>

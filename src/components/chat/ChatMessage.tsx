@@ -10,10 +10,9 @@ import type { ChatMessage as ChatMessageType } from '@/lib/types';
 interface ChatMessageProps {
   message: ChatMessageType;
   isStreaming?: boolean;
-  onRetry?: () => void;
 }
 
-export function ChatMessage({ message, isStreaming, onRetry }: ChatMessageProps) {
+export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   if (!isUser && isStreaming && !message.content) {
@@ -48,14 +47,6 @@ export function ChatMessage({ message, isStreaming, onRetry }: ChatMessageProps)
             {message.content}
           </ReactMarkdown>
         </div>
-        {onRetry && (
-          <button
-            onClick={onRetry}
-            className="mt-2 text-xs font-medium text-primary hover:underline"
-          >
-            Retry
-          </button>
-        )}
       </div>
     </div>
   );

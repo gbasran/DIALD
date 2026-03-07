@@ -36,10 +36,16 @@ export function AssignmentForm({ initialData, onSubmit, onCancel }: AssignmentFo
       setEstimatedMinutes(initialData.estimatedMinutes);
       setDescription(initialData.description);
       setStatus(initialData.status);
-    } else if (courses.length > 0 && !courseId) {
+    }
+  }, [initialData]);
+
+  // Default to first course when creating a new assignment
+  useEffect(() => {
+    if (!initialData && courses.length > 0 && !courseId) {
       setCourseId(courses[0].id);
     }
-  }, [initialData, courses, courseId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courses, initialData]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

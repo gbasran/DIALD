@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Assignment, Course } from '@/lib/types';
-import { getUrgencyBorder, formatRelativeDate } from '@/lib/utils';
+import { getUrgencyBorder, formatRelativeDate, sortByStatusThenDueDate } from '@/lib/utils';
 import { StatusDots } from '@/components/assignments/StatusDots';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
@@ -46,12 +46,6 @@ function formatWeekRange(monday: Date): string {
   return `${monStr} – ${sunStr}, ${year}`;
 }
 
-const STATUS_ORDER: Record<Assignment['status'], number> = {
-  'in-progress': 0,
-  'todo': 1,
-  'done': 2,
-};
-
 export function WeeklyTimeline({
   assignments,
   courses,
@@ -89,17 +83,8 @@ export function WeeklyTimeline({
   const courseMap = new Map(courses.map((c) => [c.id, c]));
 
   const dayAssignments = days.map((day) => {
-    const filtered = assignments.filter((a) => {
-      const dueDate = new Date(a.dueDate);
-      return isSameDay(dueDate, day);
-    });
-    // Sort: in-progress first, then todo, then done; within each group by due time
-    filtered.sort((a, b) => {
-      const statusDiff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-      if (statusDiff !== 0) return statusDiff;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    });
-    return filtered;
+    const filtered = assignments.filter((a) => isSameDay(new Date(a.dueDate), day));
+    return sortByStatusThenDueDate(filtered);
   });
 
   function goToPrev() {
@@ -204,10 +189,17 @@ export function WeeklyTimeline({
                 {(maxPerDay ? items.slice(0, maxPerDay) : items).map((assignment) => {
                   const course = courseMap.get(assignment.courseId);
                   return (
-                    <button
+                    <div
                       key={assignment.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onEdit(assignment)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onEdit(assignment);
+                        }
+                      }}
                       className={`w-full text-left rounded-lg border border-l-[3px] ${getUrgencyBorder(
                         assignment.dueDate
                       )} glass p-2 hover:bg-muted/50 transition-colors cursor-pointer`}
@@ -247,7 +239,7 @@ export function WeeklyTimeline({
                           size="sm"
                         />
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
                 {maxPerDay && items.length > maxPerDay && (

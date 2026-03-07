@@ -55,7 +55,7 @@ export interface StudentContext {
   courses: Array<{
     code: string;
     name: string;
-    schedule: Array<{ day: string; startTime: string; endTime: string }>;
+    schedule: Array<{ day: ClassTime['day']; startTime: string; endTime: string }>;
     location: string;
   }>;
   assignments: Array<{
@@ -64,7 +64,7 @@ export interface StudentContext {
     courseCode: string;
     dueDate: string;
     estimatedMinutes: number;
-    status: string;
+    status: Assignment['status'];
   }>;
 }
 

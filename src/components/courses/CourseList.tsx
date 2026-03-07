@@ -4,13 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import type { Course, ClassTime } from '@/lib/types';
 import { MapPin, Clock, Pencil, Trash2 } from 'lucide-react';
 
@@ -124,34 +118,21 @@ export function CourseList({ courses, onEdit, onDelete }: CourseListProps) {
           </div>
         </Card>
       ))}
-      <Dialog open={!!deletingCourse} onOpenChange={() => setDeletingCourse(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Course</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{' '}
-              <span className="font-semibold text-foreground">
-                {deletingCourse?.code} — {deletingCourse?.name}
-              </span>
-              ? This can&apos;t be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setDeletingCourse(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (deletingCourse) onDelete(deletingCourse.id);
-                setDeletingCourse(null);
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={!!deletingCourse}
+        onOpenChange={() => setDeletingCourse(null)}
+        onConfirm={() => { if (deletingCourse) onDelete(deletingCourse.id); }}
+        title="Delete Course"
+        description={
+          <>
+            Are you sure you want to delete{' '}
+            <span className="font-semibold text-foreground">
+              {deletingCourse?.code} — {deletingCourse?.name}
+            </span>
+            ? This can&apos;t be undone.
+          </>
+        }
+      />
     </div>
   );
 }

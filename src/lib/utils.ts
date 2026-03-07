@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { Assignment } from '@/lib/types'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -71,6 +72,20 @@ export function getGreeting(): string {
   if (hour < 12) return 'morning';
   if (hour < 17) return 'afternoon';
   return 'evening';
+}
+
+export const STATUS_ORDER: Record<Assignment['status'], number> = {
+  'in-progress': 0,
+  'todo': 1,
+  'done': 2,
+};
+
+export function sortByStatusThenDueDate<T extends { status: Assignment['status']; dueDate: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const statusDiff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+    if (statusDiff !== 0) return statusDiff;
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  });
 }
 
 export function formatRelativeTime(timestamp: number): string {

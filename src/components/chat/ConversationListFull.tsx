@@ -10,15 +10,10 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { formatRelativeTime } from '@/lib/utils';
 import { useConversations } from '@/hooks/use-conversations';
 import type { Conversation } from '@/lib/types';
@@ -183,24 +178,25 @@ export function ConversationListFull({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
           onClick={onBack}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-        </button>
+        </Button>
         <h2 className="font-heading text-lg font-bold">Conversations</h2>
       </div>
 
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
+        <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search conversations..."
-          className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="rounded-xl pl-9"
         />
       </div>
 
@@ -226,34 +222,18 @@ export function ConversationListFull({
       )}
 
       {/* Delete confirmation dialog */}
-      <Dialog
+      <ConfirmDeleteDialog
         open={deleteTarget !== null}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete conversation</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete &quot;{deleteTarget?.title || 'this conversation'}&quot;?
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <button
-              onClick={() => setDeleteTarget(null)}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onConfirm={handleDelete}
+        title="Delete conversation"
+        description={
+          <>
+            Are you sure you want to delete &quot;{deleteTarget?.title || 'this conversation'}&quot;?
+            This action cannot be undone.
+          </>
+        }
+      />
     </div>
   );
 }
