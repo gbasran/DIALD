@@ -29,8 +29,17 @@ export const STORAGE_KEYS = {
   TASKS: 'diald-tasks',
   SESSIONS: 'diald-sessions',
   CHAT_HISTORY: 'diald-chat-history',
+  CONVERSATIONS: 'diald-conversations',
   SETTINGS: 'diald-settings',
 } as const;
+
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
 
 export interface ChatMessage {
   id: string;
