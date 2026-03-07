@@ -37,7 +37,7 @@ export default function RootLayout({
         <Providers>
           <div className="flex h-screen flex-col bg-background">
             {/* Top bar */}
-            <header className="shrink-0 border-b border-border/40 bg-background/80 backdrop-blur-sm">
+            <header className="shrink-0 border-b border-border/40 bg-card/80 dark:bg-background/80 backdrop-blur-sm">
               <div className="flex items-center justify-between px-4 py-2">
                 <div className="flex items-center gap-3">
                   <h1 className="font-heading text-lg font-bold text-primary">DIALD</h1>
