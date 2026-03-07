@@ -34,7 +34,10 @@ const config: Config = {
   				DEFAULT: 'hsl(var(--secondary))',
   				foreground: 'hsl(var(--secondary-foreground))'
   			},
-  			destructive: 'hsl(var(--destructive))',
+  			destructive: {
+  				DEFAULT: 'hsl(var(--destructive))',
+  				foreground: 'hsl(var(--destructive-foreground))'
+  			},
   			muted: {
   				DEFAULT: 'hsl(var(--muted))',
   				foreground: 'hsl(var(--muted-foreground))'
@@ -73,6 +76,25 @@ const config: Config = {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
+  		},
+  		animation: {
+  			'fade-in': 'fade-in 0.3s ease-out',
+  			'slide-up': 'slide-up 0.4s ease-out',
+  			'card-enter': 'card-enter 0.4s ease-out',
+  		},
+  		keyframes: {
+  			'fade-in': {
+  				from: { opacity: '0', transform: 'translateY(8px)' },
+  				to: { opacity: '1', transform: 'translateY(0)' },
+  			},
+  			'slide-up': {
+  				from: { opacity: '0', transform: 'translateY(16px)' },
+  				to: { opacity: '1', transform: 'translateY(0)' },
+  			},
+  			'card-enter': {
+  				from: { opacity: '0', transform: 'translateY(12px) scale(0.97)' },
+  				to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+  			},
   		}
   	}
   },
