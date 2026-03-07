@@ -58,10 +58,12 @@ export function useWhatNow() {
       schedule: c.schedule.map(s => ({ day: s.day, startTime: s.startTime, endTime: s.endTime })),
     }));
 
+    const controller = new AbortController();
     fetch('/api/whatnow', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assignments: apiAssignments, courses: apiCourses }),
+      signal: controller.signal,
     })
       .then(res => {
         if (!res.ok) throw new Error(`${res.status}`);
@@ -72,9 +74,13 @@ export function useWhatNow() {
         const cache: WhatNowCache = { result: data, cachedAt: Date.now(), assignmentHash: hash };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
       })
-      .catch(() => {
-        // AI unavailable — result stays null, dashboard falls back to deadline-based
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          // AI unavailable — result stays null, dashboard falls back to deadline-based
+        }
       });
+
+    return () => controller.abort();
   }, [assignments, courses, assignmentsLoaded, coursesLoaded]);
 
   return result;

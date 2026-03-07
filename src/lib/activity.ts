@@ -1,3 +1,4 @@
+import { formatRelativeTime } from '@/lib/utils';
 import type { Assignment, Course } from '@/lib/types';
 
 export interface ActivityEvent {
@@ -9,71 +10,50 @@ export interface ActivityEvent {
   type: 'assignment' | 'achievement';
 }
 
-function formatRelativeTimestamp(ts: number): string {
-  const diff = Date.now() - ts;
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 export function deriveActivityEvents(
   assignments: Assignment[],
   courses: Course[]
 ): ActivityEvent[] {
   const courseMap = new Map<string, Course>(courses.map(c => [c.id, c]));
-  const events: ActivityEvent[] = [];
+  const events: Array<Omit<ActivityEvent, 'time'>> = [];
 
   for (const a of assignments) {
     const courseCode = courseMap.get(a.courseId)?.code || 'Unknown';
     const detail = `${courseCode} -- ${a.name}`;
 
     if (a.completedAt) {
-      const ts = new Date(a.completedAt).getTime();
       events.push({
         id: `${a.id}-completed`,
         action: 'Completed',
         detail,
-        time: '',
-        timestamp: ts,
+        timestamp: new Date(a.completedAt).getTime(),
         type: 'achievement',
       });
     }
 
     if (a.startedAt) {
-      const ts = new Date(a.startedAt).getTime();
       events.push({
         id: `${a.id}-started`,
         action: 'Started working on',
         detail,
-        time: '',
-        timestamp: ts,
+        timestamp: new Date(a.startedAt).getTime(),
         type: 'assignment',
       });
     }
 
     if (a.createdAt) {
-      const ts = new Date(a.createdAt).getTime();
       events.push({
         id: `${a.id}-created`,
         action: 'Added assignment',
         detail,
-        time: '',
-        timestamp: ts,
+        timestamp: new Date(a.createdAt).getTime(),
         type: 'assignment',
       });
     }
   }
 
-  events.sort((a, b) => b.timestamp - a.timestamp);
-
-  for (const event of events) {
-    event.time = formatRelativeTimestamp(event.timestamp);
-  }
-
-  return events.slice(0, 5);
+  return events
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 5)
+    .map(e => ({ ...e, time: formatRelativeTime(e.timestamp) }));
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCourses } from '@/hooks/use-courses';
 import { useAssignments } from '@/hooks/use-assignments';
 import type { InsightCard } from '@/lib/types';
@@ -17,9 +17,15 @@ export function useInsights() {
   const { assignments, isLoaded: assignmentsLoaded } = useAssignments();
   const [insights, setInsights] = useState<InsightCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(() => {
     if (!assignmentsLoaded || !coursesLoaded) return;
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsLoading(true);
 
     const courseMap = new Map(courses.map(c => [c.id, c]));
@@ -36,18 +42,22 @@ export function useInsights() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assignments: apiAssignments, courses: apiCourses }),
+      signal: controller.signal,
     })
       .then(res => {
         if (!res.ok) throw new Error(`${res.status}`);
         return res.json();
       })
       .then((data: { insights: InsightCard[] }) => setInsights(data.insights))
-      .catch(() => setInsights([FALLBACK_INSIGHT]))
+      .catch(err => {
+        if (err.name !== 'AbortError') setInsights([FALLBACK_INSIGHT]);
+      })
       .finally(() => setIsLoading(false));
   }, [assignments, courses, assignmentsLoaded, coursesLoaded]);
 
   useEffect(() => {
     refresh();
+    return () => abortRef.current?.abort();
   }, [refresh]);
 
   return { insights, isLoading, refresh };

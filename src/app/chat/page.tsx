@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useChat } from '@/hooks/use-chat';
 import { useConversations } from '@/hooks/use-conversations';
@@ -13,6 +13,30 @@ import type { ChatMessage } from '@/lib/types';
 type ChatView = 'landing' | 'viewAll' | 'conversation';
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={<ChatSkeleton />}>
+      <ChatPageContent />
+    </Suspense>
+  );
+}
+
+function ChatSkeleton() {
+  return (
+    <div className="animate-fade-in space-y-6">
+      <div>
+        <div className="h-7 w-24 animate-pulse rounded bg-muted" />
+        <div className="mt-2 h-4 w-48 animate-pulse rounded bg-muted" />
+      </div>
+      <div className="h-32 animate-pulse rounded-xl bg-muted" />
+      <div className="space-y-2">
+        <div className="h-16 animate-pulse rounded-xl bg-muted" />
+        <div className="h-16 animate-pulse rounded-xl bg-muted" />
+      </div>
+    </div>
+  );
+}
+
+function ChatPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const conversationParam = searchParams.get('c');

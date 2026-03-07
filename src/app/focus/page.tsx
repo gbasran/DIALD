@@ -9,11 +9,6 @@ const presets = [
   { label: '15 min', subtitle: 'Quick burst', minutes: 15 },
 ];
 
-const todaySessions = [
-  { id: '1', task: 'Algorithm Analysis Essay', duration: '45 min', time: '10:30 AM' },
-  { id: '2', task: 'Linear Algebra PS7', duration: '25 min', time: '1:15 PM' },
-  { id: '3', task: 'Technical Writing Draft', duration: '30 min', time: '3:00 PM' },
-];
 
 export default function FocusPage() {
   return (
@@ -69,17 +64,18 @@ export default function FocusPage() {
 
         {/* Controls */}
         <div className="mt-6 flex items-center gap-3">
-          <Button variant="outline" size="icon" className="h-10 w-10 rounded-full">
+          <Button variant="outline" size="icon" className="h-10 w-10 rounded-full" aria-label="Reset timer">
             <RotateCcw className="h-4 w-4" />
           </Button>
           <Button size="lg" className="gap-2 rounded-full bg-[hsl(var(--focus-purple))] px-8 hover:bg-[hsl(var(--focus-purple))]/90">
             <Play className="h-5 w-5" />
             Start Focus
           </Button>
-          <Button variant="outline" size="icon" className="h-10 w-10 rounded-full">
+          <Button variant="outline" size="icon" className="h-10 w-10 rounded-full" aria-label="Take a break">
             <Coffee className="h-4 w-4" />
           </Button>
         </div>
+        <p className="mt-3 text-xs text-muted-foreground">Timer functionality coming soon</p>
       </div>
 
       {/* Presets */}
@@ -102,27 +98,6 @@ export default function FocusPage() {
         </div>
       </div>
 
-      {/* Today's sessions */}
-      <div className="mx-auto max-w-sm">
-        <h3 className="mb-3 text-center font-heading text-sm font-semibold text-muted-foreground">
-          Today&apos;s Sessions
-        </h3>
-        <div className="space-y-2">
-          {todaySessions.map((session) => (
-            <Card key={session.id} className="animate-card-enter">
-              <CardContent className="flex items-center justify-between p-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{session.task}</p>
-                  <p className="text-xs text-muted-foreground">{session.time}</p>
-                </div>
-                <span className="shrink-0 rounded-md bg-[hsl(var(--focus-purple))]/10 px-2 py-0.5 text-xs font-medium text-[hsl(var(--focus-purple))]">
-                  {session.duration}
-                </span>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

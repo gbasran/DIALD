@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, BookOpen, ClipboardList, MessageSquare, Timer, Zap, Shield, Plus, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { STORAGE_KEYS } from '@/lib/types';
-import type { Conversation } from '@/lib/types';
+import { useLastConversation } from '@/hooks/use-last-conversation';
 
 const navItems = [
   {
@@ -54,26 +52,8 @@ const navItems = [
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const [lastConversationId, setLastConversationId] = useState<string | null>(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
-      if (raw) {
-        const convos: Conversation[] = JSON.parse(raw);
-        if (convos.length > 0) {
-          const sorted = [...convos].sort((a, b) => b.updatedAt - a.updatedAt);
-          setLastConversationId(sorted[0].id);
-        } else {
-          setLastConversationId(null);
-        }
-      } else {
-        setLastConversationId(null);
-      }
-    } catch {
-      setLastConversationId(null);
-    }
-  }, [pathname]);
+  const lastConversation = useLastConversation(pathname);
+  const lastConversationId = lastConversation?.id ?? null;
 
   if (pathname === '/focus') {
     return null;

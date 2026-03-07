@@ -5,26 +5,36 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getUrgencyColor(dueDate: string): string {
-  const now = Date.now();
-  const due = new Date(dueDate).getTime();
-  const hoursLeft = (due - now) / (1000 * 60 * 60);
+type UrgencyLevel = 'critical' | 'warning' | 'soon' | 'calm';
 
-  if (hoursLeft < 24) return 'text-destructive';
-  if (hoursLeft < 72) return 'text-[hsl(var(--warning))]';
-  if (hoursLeft < 168) return 'text-primary';
-  return 'text-muted-foreground';
+export function getUrgencyLevel(dueDate: string): UrgencyLevel {
+  const hoursLeft = (new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hoursLeft < 24) return 'critical';
+  if (hoursLeft < 72) return 'warning';
+  if (hoursLeft < 168) return 'soon';
+  return 'calm';
+}
+
+const URGENCY_TEXT: Record<UrgencyLevel, string> = {
+  critical: 'text-destructive',
+  warning: 'text-[hsl(var(--warning))]',
+  soon: 'text-primary',
+  calm: 'text-muted-foreground',
+};
+
+const URGENCY_BORDER: Record<UrgencyLevel, string> = {
+  critical: 'border-l-destructive',
+  warning: 'border-l-[hsl(var(--warning))]',
+  soon: 'border-l-primary',
+  calm: 'border-l-muted-foreground',
+};
+
+export function getUrgencyColor(dueDate: string): string {
+  return URGENCY_TEXT[getUrgencyLevel(dueDate)];
 }
 
 export function getUrgencyBorder(dueDate: string): string {
-  const now = Date.now();
-  const due = new Date(dueDate).getTime();
-  const hoursLeft = (due - now) / (1000 * 60 * 60);
-
-  if (hoursLeft < 24) return 'border-l-destructive';
-  if (hoursLeft < 72) return 'border-l-[hsl(var(--warning))]';
-  if (hoursLeft < 168) return 'border-l-primary';
-  return 'border-l-muted-foreground';
+  return URGENCY_BORDER[getUrgencyLevel(dueDate)];
 }
 
 export function formatRelativeDate(dateStr: string): string {

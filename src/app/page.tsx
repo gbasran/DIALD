@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Clock, Target, TrendingUp, Flame, Zap, Brain, RefreshCw, MessageSquare, Plus, ArrowRight } from 'lucide-react';
 import { useCourses } from '@/hooks/use-courses';
 import { useAssignments } from '@/hooks/use-assignments';
 import { useWhatNow } from '@/hooks/use-whatnow';
 import { useInsights } from '@/hooks/use-insights';
-import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, formatRelativeTime, getGreeting } from '@/lib/utils';
+import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, getGreeting } from '@/lib/utils';
 import { deriveActivityEvents } from '@/lib/activity';
 import { WhatNowCard } from '@/components/dashboard/WhatNowCard';
 import { StatusDots } from '@/components/assignments/StatusDots';
-import { STORAGE_KEYS } from '@/lib/types';
-import type { ClassTime, Conversation } from '@/lib/types';
+import { useLastConversation } from '@/hooks/use-last-conversation';
+import type { ClassTime } from '@/lib/types';
 
 // Demo data (kept for panels not yet wired to real data)
 const demoWeek = [true, true, true, false, true, true, true];
@@ -31,27 +30,14 @@ export default function DashboardPage() {
   const aiResult = useWhatNow();
   const { insights, isLoading: insightsLoading, refresh: fetchInsights } = useInsights();
 
+  const lastConversation = useLastConversation();
+
   const [greeting, setGreeting] = useState('');
   const [todayName, setTodayName] = useState('');
-  const [lastConversation, setLastConversation] = useState<{ id: string; time: string } | null>(null);
 
   useEffect(() => {
     setGreeting(getGreeting());
     setTodayName(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
-      if (raw) {
-        const convos: Conversation[] = JSON.parse(raw);
-        if (convos.length > 0) {
-          const sorted = [...convos].sort((a, b) => b.updatedAt - a.updatedAt);
-          setLastConversation({
-            id: sorted[0].id,
-            time: formatRelativeTime(sorted[0].updatedAt),
-          });
-        }
-      }
-    } catch { /* no chat history */ }
   }, []);
 
   const goalPct = Math.min(Math.round((127 / 150) * 100), 100);

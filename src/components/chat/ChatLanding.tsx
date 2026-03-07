@@ -54,7 +54,7 @@ export function ChatLanding({
             >
               <Zap className="h-4 w-4 text-primary" />
               <span className="font-heading text-sm font-bold text-primary">
-                Let&apos;s Get to Biznesss
+                Let&apos;s Get to Business
               </span>
             </button>
           </CardContent>
