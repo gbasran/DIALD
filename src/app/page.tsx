@@ -21,8 +21,8 @@ const demoHourly = [0, 0, 15, 45, 30, 0, 22, 15, 0, 0, 0, 0];
 
 const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const;
-const WEEK_DAY_ABBREV: Record<string, string> = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri' };
+const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
+const WEEK_DAY_ABBREV: Record<string, string> = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat', Sunday: 'Sun' };
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -120,7 +120,7 @@ export default function DashboardPage() {
   startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   startOfWeek.setHours(0, 0, 0, 0);
   const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 4);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
   for (const a of incompleteAssignments) {
     const due = new Date(a.dueDate);
@@ -217,7 +217,7 @@ export default function DashboardPage() {
           <div className="glass glow-border rounded-xl p-3.5 flex-1 min-h-0 flex flex-col">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">This Week</p>
             {courses.length > 0 ? (
-              <div className="grid grid-cols-5 gap-1 flex-1">
+              <div className="grid grid-cols-7 gap-1 flex-1">
                 {WEEK_DAYS.map((day) => {
                   const classes = scheduleByDay.get(day) || [];
                   const dayAssignments = assignmentsByDay.get(day) || [];
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                       <p className={`text-[9px] font-semibold text-center mb-1 ${isToday ? 'text-primary' : 'text-muted-foreground/50'}`}>
                         {WEEK_DAY_ABBREV[day]}
                       </p>
-                      <div className={`flex flex-col gap-0.5 flex-1 rounded-md p-0.5 ${isToday ? 'bg-primary/[0.06] ring-1 ring-primary/20' : ''}`}>
+                      <div className={`flex flex-col gap-0.5 flex-1 rounded-md p-0.5 overflow-y-auto ${isToday ? 'bg-primary/[0.06] ring-1 ring-primary/20' : ''}`}>
                         {classes.map((entry, idx) => (
                           <div
                             key={`c-${idx}`}
@@ -238,18 +238,19 @@ export default function DashboardPage() {
                             <p className="text-[7px] leading-tight opacity-80">{entry.classTime.startTime}</p>
                           </div>
                         ))}
-                        {dayAssignments.map((a) => (
-                          <div
-                            key={`a-${a.id}`}
-                            className={`rounded px-1 py-0.5 border border-dashed ${getUrgencyBorder(a.dueDate)} bg-background/40`}
-                          >
-                            <div className="flex items-center gap-0.5">
-                              <StatusDots status={a.status} interactive={false} size="sm" />
-                              <p className="text-[8px] font-medium leading-tight truncate">{a.name}</p>
+                        {dayAssignments.map((a) => {
+                          const course = courseMap.get(a.courseId);
+                          return (
+                            <div
+                              key={`a-${a.id}`}
+                              className="rounded px-1 py-0.5 text-white/90"
+                              style={{ backgroundColor: course?.color ?? 'hsl(var(--muted))', opacity: 0.75 }}
+                            >
+                              <p className="text-[8px] font-bold leading-tight truncate">{a.name}</p>
+                              <p className="text-[7px] leading-tight opacity-80">Due</p>
                             </div>
-                            <p className={`text-[7px] leading-tight ${getUrgencyColor(a.dueDate)}`}>Due</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {classes.length === 0 && dayAssignments.length === 0 && (
                           <div className="flex-1" />
                         )}

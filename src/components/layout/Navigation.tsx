@@ -54,19 +54,24 @@ const navItems = [
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const [hasChatHistory, setHasChatHistory] = useState(false);
+  const [lastConversationId, setLastConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
       if (raw) {
         const convos: Conversation[] = JSON.parse(raw);
-        setHasChatHistory(convos.length > 0);
+        if (convos.length > 0) {
+          const sorted = [...convos].sort((a, b) => b.updatedAt - a.updatedAt);
+          setLastConversationId(sorted[0].id);
+        } else {
+          setLastConversationId(null);
+        }
       } else {
-        setHasChatHistory(false);
+        setLastConversationId(null);
       }
     } catch {
-      setHasChatHistory(false);
+      setLastConversationId(null);
     }
   }, [pathname]);
 
@@ -133,9 +138,7 @@ export function Navigation() {
                   {/* Split actions */}
                   <div className="mt-auto grid grid-cols-2 gap-px bg-border/30">
                     <button
-                      onClick={() => {
-                        router.push('/chat');
-                      }}
+                      onClick={() => router.push('/chat')}
                       className="flex items-center justify-center gap-1 bg-background/50 px-2 py-1.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/[0.08]"
                     >
                       <Plus className="h-3 w-3" />
@@ -143,12 +146,15 @@ export function Navigation() {
                     </button>
                     <button
                       onClick={() => {
-                        if (pathname === '/chat') return;
-                        router.push('/chat');
+                        if (lastConversationId) {
+                          router.push(`/chat?c=${lastConversationId}`);
+                        } else {
+                          router.push('/chat');
+                        }
                       }}
                       className="flex items-center justify-center gap-1 bg-background/50 px-2 py-1.5 text-[10px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.08]"
                     >
-                      {hasChatHistory ? 'Continue' : 'Start'}
+                      {lastConversationId ? 'Continue' : 'Start'}
                       <ArrowRight className="h-3 w-3" />
                     </button>
                   </div>
