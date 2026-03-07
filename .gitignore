@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+vendor/
+.venv/
+venv/
+env/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment & secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# AI/agentic workflow artifacts
+.claude/
+CLAUDE.md
+.cursorrules
+.cursorignore
+.aider*
+.copilot/
+.github/copilot/
+.continue/
+.codeium/
+.tabnine/
+.sourcegraph/
