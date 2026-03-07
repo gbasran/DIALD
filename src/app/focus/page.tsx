@@ -1,10 +1,117 @@
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Play, RotateCcw, Coffee } from 'lucide-react';
+
+const presets = [
+  { label: '25 min', subtitle: 'Pomodoro', minutes: 25 },
+  { label: '50 min', subtitle: 'Deep work', minutes: 50 },
+  { label: '15 min', subtitle: 'Quick burst', minutes: 15 },
+];
+
+const todaySessions = [
+  { id: '1', task: 'Algorithm Analysis Essay', duration: '45 min', time: '10:30 AM' },
+  { id: '2', task: 'Linear Algebra PS7', duration: '25 min', time: '1:15 PM' },
+  { id: '3', task: 'Technical Writing Draft', duration: '30 min', time: '3:00 PM' },
+];
+
 export default function FocusPage() {
   return (
-    <div className="animate-fade-in flex min-h-[60vh] flex-col items-center justify-center space-y-4 text-center">
-      <h2 className="font-heading text-2xl font-bold">Focus Mode</h2>
-      <p className="text-muted-foreground">
-        Breathe in. You have one thing to do right now.
-      </p>
+    <div className="animate-fade-in space-y-8 pb-8">
+      {/* Centered timer display */}
+      <div className="flex flex-col items-center pt-8 text-center">
+        <h2 className="font-heading text-lg font-semibold text-muted-foreground">Focus Mode</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Breathe in. You have one thing to do right now.
+        </p>
+
+        {/* Timer circle */}
+        <div className="relative mt-8 flex h-56 w-56 items-center justify-center">
+          {/* Background ring */}
+          <svg className="absolute inset-0" viewBox="0 0 224 224">
+            <circle
+              cx="112"
+              cy="112"
+              r="100"
+              fill="none"
+              stroke="hsl(var(--muted))"
+              strokeWidth="8"
+            />
+            <circle
+              cx="112"
+              cy="112"
+              r="100"
+              fill="none"
+              stroke="hsl(var(--focus-purple))"
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 100}`}
+              strokeDashoffset={`${2 * Math.PI * 100 * 0.0}`}
+              transform="rotate(-90 112 112)"
+              className="transition-all duration-1000"
+            />
+          </svg>
+          <div className="z-10 text-center">
+            <p className="font-heading text-5xl font-bold tabular-nums">25:00</p>
+            <p className="mt-1 text-sm text-muted-foreground">ready</p>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="mt-6 flex items-center gap-3">
+          <Button variant="outline" size="icon" className="h-10 w-10 rounded-full">
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+          <Button size="lg" className="gap-2 rounded-full bg-[hsl(var(--focus-purple))] px-8 hover:bg-[hsl(var(--focus-purple))]/90">
+            <Play className="h-5 w-5" />
+            Start Focus
+          </Button>
+          <Button variant="outline" size="icon" className="h-10 w-10 rounded-full">
+            <Coffee className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Presets */}
+      <div className="mx-auto max-w-sm">
+        <h3 className="mb-3 text-center font-heading text-sm font-semibold text-muted-foreground">
+          Timer Presets
+        </h3>
+        <div className="grid grid-cols-3 gap-2">
+          {presets.map((preset) => (
+            <Card
+              key={preset.minutes}
+              className="animate-card-enter cursor-pointer border-2 border-transparent transition-colors hover:border-[hsl(var(--focus-purple))]/30"
+            >
+              <CardContent className="p-3 text-center">
+                <p className="font-heading text-lg font-bold">{preset.label}</p>
+                <p className="text-xs text-muted-foreground">{preset.subtitle}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Today's sessions */}
+      <div className="mx-auto max-w-sm">
+        <h3 className="mb-3 text-center font-heading text-sm font-semibold text-muted-foreground">
+          Today&apos;s Sessions
+        </h3>
+        <div className="space-y-2">
+          {todaySessions.map((session) => (
+            <Card key={session.id} className="animate-card-enter">
+              <CardContent className="flex items-center justify-between p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{session.task}</p>
+                  <p className="text-xs text-muted-foreground">{session.time}</p>
+                </div>
+                <span className="shrink-0 rounded-md bg-[hsl(var(--focus-purple))]/10 px-2 py-0.5 text-xs font-medium text-[hsl(var(--focus-purple))]">
+                  {session.duration}
+                </span>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
