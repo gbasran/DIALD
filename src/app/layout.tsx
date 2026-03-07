@@ -35,15 +35,31 @@ export default function RootLayout({
     >
       <body className="antialiased">
         <Providers>
-          <div className="min-h-screen bg-background">
-            <header className="mx-auto flex max-w-4xl items-center justify-between px-4 pt-4">
-              <h1 className="font-heading text-lg font-bold text-primary">DIALD</h1>
-              <ThemeToggle />
+          <div className="flex h-screen flex-col bg-background">
+            {/* Top bar */}
+            <header className="shrink-0 border-b border-border/40 bg-background/80 backdrop-blur-sm">
+              <div className="flex items-center justify-between px-4 py-2">
+                <div className="flex items-center gap-3">
+                  <h1 className="font-heading text-lg font-bold text-primary">DIALD</h1>
+                  <div className="hidden h-4 w-px bg-border/60 sm:block" />
+                  <p className="hidden text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50 sm:block">
+                    Academic Command Center
+                  </p>
+                </div>
+                <ThemeToggle />
+              </div>
             </header>
-            <main className="mx-auto max-w-4xl px-4 pb-20 pt-6">
-              {children}
-            </main>
-            <Navigation />
+
+            {/* Content + Nav — fills remaining viewport */}
+            <div className="flex min-h-0 flex-1">
+              {/* Main content — scrollable only on mobile */}
+              <main className="min-h-0 flex-1 overflow-y-auto p-3 pb-20 lg:overflow-hidden lg:pb-3">
+                {children}
+              </main>
+
+              {/* Desktop nav panel */}
+              <Navigation />
+            </div>
           </div>
         </Providers>
       </body>
