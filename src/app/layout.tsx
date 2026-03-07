@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Nunito, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Navigation } from "@/components/layout/Navigation";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -33,7 +35,16 @@ export default function RootLayout({
     >
       <body className="antialiased">
         <Providers>
-          {children}
+          <div className="min-h-screen bg-background">
+            <header className="mx-auto flex max-w-4xl items-center justify-between px-4 pt-4">
+              <h1 className="font-heading text-lg font-bold text-primary">DIALD</h1>
+              <ThemeToggle />
+            </header>
+            <main className="mx-auto max-w-4xl px-4 pb-20 pt-6">
+              {children}
+            </main>
+            <Navigation />
+          </div>
         </Providers>
       </body>
     </html>

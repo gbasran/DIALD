@@ -1,20 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function DashboardPage() {
+export default function CoursesPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h2 className="font-heading text-2xl font-bold">Dashboard</h2>
-        <p className="text-muted-foreground">Your day at a glance</p>
+        <h2 className="font-heading text-2xl font-bold">Courses</h2>
+        <p className="text-muted-foreground">Manage your classes</p>
       </div>
 
       <Card className="animate-card-enter">
         <CardHeader>
-          <CardTitle className="font-heading">What Now?</CardTitle>
+          <CardTitle className="font-heading">Your Courses</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            What Now card coming in Phase 3
+            Course management coming in Phase 2
           </p>
         </CardContent>
       </Card>

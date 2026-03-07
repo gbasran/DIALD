@@ -1,20 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function DashboardPage() {
+export default function ChatPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h2 className="font-heading text-2xl font-bold">Dashboard</h2>
-        <p className="text-muted-foreground">Your day at a glance</p>
+        <h2 className="font-heading text-2xl font-bold">Chat</h2>
+        <p className="text-muted-foreground">Your AI study companion</p>
       </div>
 
       <Card className="animate-card-enter">
         <CardHeader>
-          <CardTitle className="font-heading">What Now?</CardTitle>
+          <CardTitle className="font-heading">AI Chat</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            What Now card coming in Phase 3
+            AI chat coming in Phase 4
           </p>
         </CardContent>
       </Card>
