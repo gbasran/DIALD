@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { buildSystemPrompt } from '@/lib/system-prompt';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { GEMINI_MODEL } from '@/lib/constants';
 import type { StudentContext } from '@/lib/types';
 
 export async function POST(req: Request) {
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContentStream({
-      model: 'gemini-3.1-flash-lite-preview',
+      model: GEMINI_MODEL,
       contents,
       config: {
         systemInstruction: systemPrompt,
