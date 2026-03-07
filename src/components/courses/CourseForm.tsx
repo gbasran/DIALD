@@ -174,7 +174,7 @@ export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps)
                     day: e.target.value as ClassTime['day'],
                   })
                 }
-                className="h-9 rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="h-9 rounded-md border border-input bg-background text-foreground px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&>option]:bg-background [&>option]:text-foreground"
               >
                 {DAYS.map((day) => (
                   <option key={day} value={day}>
