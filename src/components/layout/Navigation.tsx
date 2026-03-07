@@ -76,7 +76,7 @@ export function Navigation() {
                   'group relative flex flex-1 flex-col rounded-xl p-3 transition-all duration-200',
                   isActive
                     ? 'glass bg-primary/[0.08] ring-1 ring-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.08)]'
-                    : 'hover:glass hover:bg-muted/30'
+                    : 'border border-border/40 bg-muted/10 hover:bg-muted/30 hover:border-border/60'
                 )}
               >
                 {/* Top row: icon + label */}
