@@ -1,22 +1,12 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { BookOpen, Clock, Target, TrendingUp, Flame, Sparkles, ArrowRight, Zap, Brain } from 'lucide-react';
+import { useCourses } from '@/hooks/use-courses';
+import { useAssignments } from '@/hooks/use-assignments';
+import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, getGreeting } from '@/lib/utils';
 
-// Demo data
-const demoStats = { coursesActive: 4, assignmentsDue: 3, focusToday: 127, weeklyGoal: 85 };
-
-const demoCourseProgress = [
-  { label: 'CS 301 - Algorithms', value: 72, color: 'bg-primary' },
-  { label: 'MATH 240 - Linear Algebra', value: 58, color: 'bg-accent' },
-  { label: 'PSY 101 - Intro Psychology', value: 91, color: 'bg-[hsl(var(--focus-purple))]' },
-  { label: 'ENG 205 - Technical Writing', value: 45, color: 'bg-[hsl(var(--warning))]' },
-];
-
-const demoUpcoming = [
-  { id: '1', title: 'Algorithm Analysis Essay', course: 'CS 301', due: 'Tomorrow', urgency: 'high' as const },
-  { id: '2', title: 'Linear Algebra Problem Set 7', course: 'MATH 240', due: 'Wed', urgency: 'medium' as const },
-  { id: '3', title: 'Chapter 12 Reading', course: 'PSY 101', due: 'Fri', urgency: 'low' as const },
-  { id: '4', title: 'Peer Review Draft', course: 'ENG 205', due: 'Next Mon', urgency: 'low' as const },
-];
-
+// Demo data (kept for panels not yet wired to real data)
 const demoActivity = [
   { id: '1', action: 'Completed focus session', detail: 'CS 301 -- 45 min', time: '2h ago', type: 'study' as const },
   { id: '2', action: 'Assignment submitted', detail: 'MATH 240 PS6', time: '4h ago', type: 'assignment' as const },
@@ -26,12 +16,6 @@ const demoActivity = [
 
 const demoWeek = [true, true, true, false, true, true, true];
 const demoHourly = [0, 0, 15, 45, 30, 0, 22, 15, 0, 0, 0, 0];
-
-const urgencyBorder: Record<string, string> = {
-  high: 'border-l-destructive',
-  medium: 'border-l-[hsl(var(--warning))]',
-  low: 'border-l-accent',
-};
 
 const activityDot: Record<string, string> = {
   study: 'bg-primary',
@@ -43,15 +27,83 @@ const activityDot: Record<string, string> = {
 const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function DashboardPage() {
-  const goalPct = Math.min(Math.round((demoStats.focusToday / 150) * 100), 100);
+  const { courses, isLoaded: coursesLoaded } = useCourses();
+  const { assignments, isLoaded: assignmentsLoaded } = useAssignments();
+  const [greeting, setGreeting] = useState('');
+
+  useEffect(() => { setGreeting(getGreeting()); }, []);
+
+  const goalPct = Math.min(Math.round((127 / 150) * 100), 100);
   const maxH = Math.max(...demoHourly, 1);
+
+  // Loading state — match layout dimensions while data loads
+  if (!coursesLoaded || !assignmentsLoaded) {
+    return (
+      <div className="flex h-full flex-col animate-fade-in">
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">&nbsp;</p>
+            <h2 className="font-heading text-xl font-bold tracking-tight">Mission Control</h2>
+          </div>
+        </div>
+        <div className="grid min-h-0 flex-1 gap-2.5 grid-cols-[180px_1fr_1fr]">
+          <div className="flex flex-col gap-2.5">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="glass glow-border rounded-xl p-3 animate-pulse h-[88px]" />
+            ))}
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <div className="glass glow-border rounded-xl p-4 animate-pulse h-[80px]" />
+            <div className="glass glow-border rounded-xl p-3.5 animate-pulse flex-1" />
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <div className="glass glow-border rounded-xl p-3.5 animate-pulse h-[200px]" />
+            <div className="glass glow-border rounded-xl p-3.5 animate-pulse flex-1" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Computed values from real data
+  const incompleteAssignments = assignments.filter(a => a.status !== 'done');
+  const dueThisWeek = incompleteAssignments.filter(a => {
+    const due = new Date(a.dueDate);
+    const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    return due <= weekFromNow;
+  }).length;
+  const doneThisWeek = assignments.filter(a => a.status === 'done').length;
+  const mostUrgent = [...incompleteAssignments].sort((a, b) => {
+    const diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    return diff !== 0 ? diff : a.estimatedMinutes - b.estimatedMinutes;
+  })[0] || null;
+  const courseMap = new Map(courses.map(c => [c.id, c]));
+
+  const courseProgress = courses.map(course => {
+    const courseAssignments = assignments.filter(a => a.courseId === course.id);
+    const done = courseAssignments.filter(a => a.status === 'done').length;
+    const total = Math.max(courseAssignments.length, 1);
+    return { label: `${course.code} - ${course.name}`, value: Math.round((done / total) * 100), color: course.color };
+  });
+
+  const upcoming = incompleteAssignments
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 5)
+    .map(a => ({
+      id: a.id,
+      title: a.name,
+      course: courseMap.get(a.courseId)?.code || 'Unknown',
+      due: formatRelativeDate(a.dueDate),
+      urgencyBorder: getUrgencyBorder(a.dueDate),
+      urgencyColor: getUrgencyColor(a.dueDate),
+    }));
 
   return (
     <div className="flex h-full flex-col animate-fade-in">
       {/* Header row */}
       <div className="mb-3 flex items-end justify-between">
         <div>
-          <p className="text-xs font-medium text-muted-foreground">Good evening</p>
+          <p className="text-xs font-medium text-muted-foreground">Good {greeting || 'evening'}</p>
           <h2 className="font-heading text-xl font-bold tracking-tight">Mission Control</h2>
         </div>
         <p className="text-[11px] text-muted-foreground">
@@ -66,8 +118,8 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-2.5">
           {/* Stat tiles */}
           {[
-            { title: 'Active Courses', value: '4', icon: BookOpen, sub: 'this semester', color: '' },
-            { title: 'Due This Week', value: '3', icon: Target, sub: '↓ 1 from yesterday', color: 'text-destructive' },
+            { title: 'Active Courses', value: String(courses.length), icon: BookOpen, sub: 'this semester', color: '' },
+            { title: 'Due This Week', value: String(dueThisWeek), icon: Target, sub: `${dueThisWeek === 0 ? 'all clear' : 'assignments pending'}`, color: dueThisWeek > 0 ? 'text-destructive' : '' },
             { title: 'Focus Today', value: '127m', icon: Clock, sub: '↑ 23m vs avg', color: 'text-accent' },
             { title: 'Weekly Goal', value: '85%', icon: TrendingUp, sub: 'on track', color: '' },
           ].map((s) => (
@@ -108,31 +160,43 @@ export default function DashboardPage() {
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">Suggested Next</span>
                 </div>
-                <h3 className="font-heading text-base font-bold leading-snug tracking-tight">Finish Algorithm Analysis Essay</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">CS 301 -- Due tomorrow</p>
+                <h3 className="font-heading text-base font-bold leading-snug tracking-tight">
+                  {mostUrgent ? mostUrgent.name : 'All caught up!'}
+                </h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {mostUrgent
+                    ? `${courseMap.get(mostUrgent.courseId)?.code || 'Unknown'} -- ${formatRelativeDate(mostUrgent.dueDate)}`
+                    : 'No pending assignments. Time to get ahead or take a break.'}
+                </p>
               </div>
-              <button className="ml-3 shrink-0 flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">
-                Start <ArrowRight className="h-3 w-3" />
-              </button>
+              {mostUrgent && (
+                <button className="ml-3 shrink-0 flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">
+                  Start <ArrowRight className="h-3 w-3" />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Course Progress */}
           <div className="glass glow-border rounded-xl p-3.5">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2.5">Course Progress</p>
-            <div className="space-y-2.5">
-              {demoCourseProgress.map((c) => (
-                <div key={c.label}>
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="font-medium">{c.label}</span>
-                    <span className="tabular-nums text-muted-foreground">{c.value}%</span>
+            {courseProgress.length > 0 ? (
+              <div className="space-y-2.5">
+                {courseProgress.map((c) => (
+                  <div key={c.label}>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="font-medium">{c.label}</span>
+                      <span className="tabular-nums text-muted-foreground">{c.value}%</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${c.value}%`, backgroundColor: c.color }} />
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
-                    <div className={`h-full rounded-full ${c.color} transition-all duration-500`} style={{ width: `${c.value}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/60">Add courses to see progress</p>
+            )}
           </div>
 
           {/* Study Streak + Focus Time — side by side to fill space */}
@@ -205,17 +269,21 @@ export default function DashboardPage() {
           {/* Upcoming */}
           <div className="glass glow-border rounded-xl p-3.5">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">Upcoming Assignments</p>
-            <div className="space-y-1.5">
-              {demoUpcoming.map((item) => (
-                <div key={item.id} className={`rounded-md border-l-[3px] bg-background/20 px-2.5 py-1.5 ${urgencyBorder[item.urgency]}`}>
-                  <p className="text-xs font-medium leading-tight">{item.title}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground/60">{item.course}</span>
-                    <span className="text-[10px] font-medium text-muted-foreground/60">{item.due}</span>
+            {upcoming.length > 0 ? (
+              <div className="space-y-1.5">
+                {upcoming.map((item) => (
+                  <div key={item.id} className={`rounded-md border-l-[3px] bg-background/20 px-2.5 py-1.5 ${item.urgencyBorder}`}>
+                    <p className="text-xs font-medium leading-tight">{item.title}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground/60">{item.course}</span>
+                      <span className={`text-[10px] font-medium ${item.urgencyColor}`}>{item.due}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/60">Nothing due -- enjoy the calm</p>
+            )}
           </div>
 
           {/* AI Insights — bigger panel */}
@@ -256,11 +324,11 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="font-heading text-lg font-bold">3</p>
+                <p className="font-heading text-lg font-bold">{String(dueThisWeek)}</p>
                 <p className="text-[9px] text-muted-foreground/50">Due</p>
               </div>
               <div>
-                <p className="font-heading text-lg font-bold text-accent">2</p>
+                <p className="font-heading text-lg font-bold text-accent">{String(doneThisWeek)}</p>
                 <p className="text-[9px] text-muted-foreground/50">Done</p>
               </div>
               <div>
