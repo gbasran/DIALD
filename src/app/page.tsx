@@ -5,6 +5,7 @@ import { BookOpen, Clock, Target, TrendingUp, Flame, Sparkles, ArrowRight, Zap, 
 import { useCourses } from '@/hooks/use-courses';
 import { useAssignments } from '@/hooks/use-assignments';
 import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, getGreeting } from '@/lib/utils';
+import type { ClassTime } from '@/lib/types';
 
 // Demo data (kept for panels not yet wired to real data)
 const demoActivity = [
@@ -26,12 +27,19 @@ const activityDot: Record<string, string> = {
 
 const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const;
+const WEEK_DAY_ABBREV: Record<string, string> = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri' };
+
 export default function DashboardPage() {
   const { courses, isLoaded: coursesLoaded } = useCourses();
   const { assignments, isLoaded: assignmentsLoaded } = useAssignments();
   const [greeting, setGreeting] = useState('');
+  const [todayName, setTodayName] = useState('');
 
-  useEffect(() => { setGreeting(getGreeting()); }, []);
+  useEffect(() => {
+    setGreeting(getGreeting());
+    setTodayName(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
+  }, []);
 
   const goalPct = Math.min(Math.round((127 / 150) * 100), 100);
   const maxH = Math.max(...demoHourly, 1);
@@ -79,12 +87,35 @@ export default function DashboardPage() {
   })[0] || null;
   const courseMap = new Map(courses.map(c => [c.id, c]));
 
-  const courseProgress = courses.map(course => {
-    const courseAssignments = assignments.filter(a => a.courseId === course.id);
-    const done = courseAssignments.filter(a => a.status === 'done').length;
-    const total = Math.max(courseAssignments.length, 1);
-    return { label: `${course.code} - ${course.name}`, value: Math.round((done / total) * 100), color: course.color };
-  });
+  // Build schedule-by-day map for weekly view
+  const scheduleByDay = new Map<string, Array<{ course: typeof courses[0]; classTime: ClassTime }>>();
+  for (const day of WEEK_DAYS) scheduleByDay.set(day, []);
+  for (const course of courses) {
+    for (const ct of course.schedule) {
+      scheduleByDay.get(ct.day)?.push({ course, classTime: ct });
+    }
+  }
+  for (const entries of scheduleByDay.values()) {
+    entries.sort((a, b) => a.classTime.startTime.localeCompare(b.classTime.startTime));
+  }
+
+  // Map incomplete assignments to their due date's weekday (this week only)
+  const assignmentsByDay = new Map<string, Array<typeof incompleteAssignments[0]>>();
+  for (const day of WEEK_DAYS) assignmentsByDay.set(day, []);
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 4);
+  endOfWeek.setHours(23, 59, 59, 999);
+  for (const a of incompleteAssignments) {
+    const due = new Date(a.dueDate);
+    if (due >= startOfWeek && due <= endOfWeek) {
+      const dayName = due.toLocaleDateString('en-US', { weekday: 'long' });
+      assignmentsByDay.get(dayName)?.push(a);
+    }
+  }
 
   const upcoming = incompleteAssignments
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
@@ -177,25 +208,50 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Course Progress */}
-          <div className="glass glow-border rounded-xl p-3.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2.5">Course Progress</p>
-            {courseProgress.length > 0 ? (
-              <div className="space-y-2.5">
-                {courseProgress.map((c) => (
-                  <div key={c.label}>
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="font-medium">{c.label}</span>
-                      <span className="tabular-nums text-muted-foreground">{c.value}%</span>
+          {/* This Week — weekly schedule view */}
+          <div className="glass glow-border rounded-xl p-3.5 flex-1 min-h-0 flex flex-col">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">This Week</p>
+            {courses.length > 0 ? (
+              <div className="grid grid-cols-5 gap-1 flex-1">
+                {WEEK_DAYS.map((day) => {
+                  const classes = scheduleByDay.get(day) || [];
+                  const dayAssignments = assignmentsByDay.get(day) || [];
+                  const isToday = todayName === day;
+                  return (
+                    <div key={day} className="flex flex-col min-w-0">
+                      <p className={`text-[9px] font-semibold text-center mb-1 ${isToday ? 'text-primary' : 'text-muted-foreground/50'}`}>
+                        {WEEK_DAY_ABBREV[day]}
+                      </p>
+                      <div className={`flex flex-col gap-0.5 flex-1 rounded-md p-0.5 ${isToday ? 'bg-primary/[0.06] ring-1 ring-primary/20' : ''}`}>
+                        {classes.map((entry, idx) => (
+                          <div
+                            key={`c-${idx}`}
+                            className="rounded px-1 py-0.5 text-white/90"
+                            style={{ backgroundColor: entry.course.color }}
+                          >
+                            <p className="text-[8px] font-bold leading-tight truncate">{entry.course.code}</p>
+                            <p className="text-[7px] leading-tight opacity-80">{entry.classTime.startTime}</p>
+                          </div>
+                        ))}
+                        {dayAssignments.map((a) => (
+                          <div
+                            key={`a-${a.id}`}
+                            className={`rounded px-1 py-0.5 border border-dashed ${getUrgencyBorder(a.dueDate)} bg-background/40`}
+                          >
+                            <p className="text-[8px] font-medium leading-tight truncate">{a.name}</p>
+                            <p className={`text-[7px] leading-tight ${getUrgencyColor(a.dueDate)}`}>Due</p>
+                          </div>
+                        ))}
+                        {classes.length === 0 && dayAssignments.length === 0 && (
+                          <div className="flex-1" />
+                        )}
+                      </div>
                     </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
-                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${c.value}%`, backgroundColor: c.color }} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground/60">Add courses to see progress</p>
+              <p className="text-xs text-muted-foreground/60">Add courses to see your week</p>
             )}
           </div>
 
