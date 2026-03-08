@@ -1,5 +1,5 @@
 import { formatRelativeTime } from '@/lib/utils';
-import type { Assignment, Course } from '@/lib/types';
+import type { Assignment, Course, FocusSession } from '@/lib/types';
 
 export interface ActivityEvent {
   id: string;
@@ -7,12 +7,13 @@ export interface ActivityEvent {
   detail: string;
   time: string;
   timestamp: number;
-  type: 'assignment' | 'achievement';
+  type: 'assignment' | 'achievement' | 'focus';
 }
 
 export function deriveActivityEvents(
   assignments: Assignment[],
-  courses: Course[]
+  courses: Course[],
+  focusSessions?: FocusSession[]
 ): ActivityEvent[] {
   const courseMap = new Map<string, Course>(courses.map(c => [c.id, c]));
   const events: Array<Omit<ActivityEvent, 'time'>> = [];
@@ -48,6 +49,20 @@ export function deriveActivityEvents(
         detail,
         timestamp: new Date(a.createdAt).getTime(),
         type: 'assignment',
+      });
+    }
+  }
+
+  if (focusSessions) {
+    for (const session of focusSessions) {
+      if (!session.completed) continue;
+      const courseCode = session.courseId ? courseMap.get(session.courseId)?.code : null;
+      events.push({
+        id: `focus-${session.id}`,
+        action: 'Focused for',
+        detail: courseCode ? `${session.duration}m on ${courseCode}` : `${session.duration}m free focus`,
+        timestamp: new Date(session.startTime).getTime(),
+        type: 'focus',
       });
     }
   }
