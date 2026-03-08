@@ -25,7 +25,7 @@ export function deriveActivityEvents(
     if (a.completedAt) {
       events.push({
         id: `${a.id}-completed`,
-        action: 'Completed',
+        action: 'Finished',
         detail,
         timestamp: new Date(a.completedAt).getTime(),
         type: 'achievement',
@@ -35,7 +35,7 @@ export function deriveActivityEvents(
     if (a.startedAt) {
       events.push({
         id: `${a.id}-started`,
-        action: 'Started working on',
+        action: 'Started',
         detail,
         timestamp: new Date(a.startedAt).getTime(),
         type: 'assignment',
@@ -45,7 +45,7 @@ export function deriveActivityEvents(
     if (a.createdAt) {
       events.push({
         id: `${a.id}-created`,
-        action: 'Added assignment',
+        action: 'Added',
         detail,
         timestamp: new Date(a.createdAt).getTime(),
         type: 'assignment',

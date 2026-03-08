@@ -12,9 +12,9 @@ export function ActivityFeed({ events }: ActivityFeedProps) {
       <div className="space-y-2 flex-1 overflow-hidden">
         {events.length > 0 ? (
           events.slice(0, 3).map((item) => {
-            const dotColor = item.action === 'Completed'
+            const dotColor = item.action === 'Finished'
               ? 'bg-accent'
-              : item.action === 'Started working on'
+              : item.action === 'Started'
               ? 'bg-primary'
               : 'bg-[hsl(var(--warning))]';
             return (
