@@ -65,10 +65,22 @@ export function useAssignments() {
     );
   }
 
+  function addMultipleAssignments(items: Omit<Assignment, 'id'>[]) {
+    setAssignments((prev) => [
+      ...prev,
+      ...items.map((a) => ({
+        ...a,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      })),
+    ]);
+  }
+
   return {
     assignments,
     isLoaded,
     addAssignment,
+    addMultipleAssignments,
     updateAssignment,
     changeStatus,
     deleteAssignment,

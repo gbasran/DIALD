@@ -39,5 +39,12 @@ export function useCourses() {
     setCourses(coursesWithIds);
   }
 
-  return { courses, isLoaded, addCourse, updateCourse, deleteCourse, loadDemoData };
+  function addMultipleCourses(items: Omit<Course, 'id'>[]) {
+    setCourses((prev) => [
+      ...prev,
+      ...items.map((c) => ({ ...c, id: crypto.randomUUID() })),
+    ]);
+  }
+
+  return { courses, isLoaded, addCourse, addMultipleCourses, updateCourse, deleteCourse, loadDemoData };
 }
