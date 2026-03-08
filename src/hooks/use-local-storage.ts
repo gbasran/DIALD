@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // Custom event name for same-tab sync between hook instances
 const SYNC_EVENT = 'diald-storage-sync';

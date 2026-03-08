@@ -3,11 +3,10 @@
 import { useFocusSessions } from '@/hooks/use-focus-sessions';
 
 export function FocusTimePanel() {
-  const { todayMinutes, weeklyTotal, dailyGoalMinutes, goalProgress, hourlyDistribution, isLoaded } = useFocusSessions();
+  const { todayMinutes, weeklyTotal, goalProgress, hourlyDistribution, isLoaded } = useFocusSessions();
 
   const minutes = isLoaded ? todayMinutes : 0;
   const weekly = isLoaded ? weeklyTotal : 0;
-  const goal = isLoaded ? dailyGoalMinutes : 150;
   const goalPct = isLoaded ? goalProgress : 0;
   const hourly = isLoaded ? hourlyDistribution : new Array(12).fill(0);
 

@@ -126,8 +126,6 @@ export function ReviewTable({ assignments: propAssignments, courses: propCourses
       addMultipleAssignments(newAssignments);
     }
 
-    const courseCount = selectedCourseList.length;
-    const assignmentCount = selectedAssignmentList.length;
     setSaved(true);
     setTimeout(() => {
       setSaved(false);

@@ -309,7 +309,6 @@ export default function FocusPage() {
         }
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Confetti pieces (must be above early returns to satisfy Rules of Hooks)
