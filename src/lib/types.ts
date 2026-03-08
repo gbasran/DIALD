@@ -29,7 +29,6 @@ export interface Assignment {
 export const STORAGE_KEYS = {
   COURSES: 'diald-courses',
   ASSIGNMENTS: 'diald-assignments',
-  TASKS: 'diald-tasks',
   SESSIONS: 'diald-sessions',
   CHAT_HISTORY: 'diald-chat-history',
   CONVERSATIONS: 'diald-conversations',

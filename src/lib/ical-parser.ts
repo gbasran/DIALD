@@ -91,7 +91,6 @@ export function parseICalEvents(icsText: string): CalendarEvent[] {
         uid: '',
         summary: '',
         description: '',
-        start: new Date(),
         end: null,
         url: '',
         categories: [],
@@ -101,7 +100,7 @@ export function parseICalEvents(icsText: string): CalendarEvent[] {
     }
 
     if (trimmed === 'END:VEVENT') {
-      if (inEvent && current.summary) {
+      if (inEvent && current.summary && current.start) {
         events.push(current as CalendarEvent);
       }
       inEvent = false;
