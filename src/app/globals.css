@@ -133,6 +133,16 @@
   to { opacity: 0; transform: translateY(-12px); }
 }
 
+@keyframes confetti-burst {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(0); opacity: 0; }
+}
+
+@keyframes ring-pulse {
+  0%, 100% { filter: drop-shadow(0 0 8px hsl(var(--focus-purple) / 0.3)); }
+  50% { filter: drop-shadow(0 0 16px hsl(var(--focus-purple) / 0.6)); }
+}
+
 /* Card hover — lift in light, glow in dark */
 @layer utilities {
   .glow-border {
