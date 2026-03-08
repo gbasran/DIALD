@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, BookOpen, ClipboardList, MessageSquare, Timer, Zap, Shield, Plus, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLastConversation } from '@/hooks/use-last-conversation';
+import { useFocusSessions } from '@/hooks/use-focus-sessions';
 
 const navItems = [
   {
@@ -44,6 +45,7 @@ export function Navigation() {
   const router = useRouter();
   const lastConversation = useLastConversation();
   const lastConversationId = lastConversation?.id ?? null;
+  const { todayMinutes, dailyGoalMinutes, goalProgress, weeklyTotal, streak } = useFocusSessions();
 
   if (pathname === '/focus') {
     return null;
@@ -132,6 +134,62 @@ export function Navigation() {
               );
             }
 
+            const isFocus = item.href === '/focus';
+
+            if (isFocus) {
+              return (
+                <div
+                  key={item.href}
+                  className={cn(
+                    'group relative flex flex-1 flex-col rounded-xl overflow-hidden transition-all duration-200',
+                    isActive
+                      ? 'glass bg-primary/[0.08] ring-1 ring-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.08)]'
+                      : 'border border-border/40 bg-muted/10'
+                  )}
+                >
+                  {/* Top row: icon + label */}
+                  <div className="flex items-center gap-2.5 p-3 pb-2">
+                    <div className={cn(
+                      'flex h-9 w-9 items-center justify-center rounded-lg border transition-all',
+                      isActive
+                        ? 'border-primary/30 bg-primary/15 shadow-[0_0_12px_hsl(var(--primary)/0.2)]'
+                        : 'border-[hsl(var(--focus-purple))]/20 bg-[hsl(var(--focus-purple))]/10'
+                    )}>
+                      <item.icon className={cn(
+                        'h-4 w-4 transition-colors',
+                        isActive ? 'text-primary' : 'text-[hsl(var(--focus-purple))]'
+                      )} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        'text-sm font-semibold leading-tight',
+                        isActive ? 'text-primary' : 'text-[hsl(var(--focus-purple))]'
+                      )}>{item.label}</p>
+                      <p className="text-[10px] text-muted-foreground/50">{item.subtitle}</p>
+                    </div>
+                  </div>
+
+                  {/* Split actions */}
+                  <div className="mt-auto grid grid-cols-2 gap-px bg-border/30">
+                    <button
+                      onClick={() => router.push('/focus')}
+                      className="flex items-center justify-center gap-1 bg-background/50 px-2 py-1.5 text-[10px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.08]"
+                    >
+                      <Timer className="h-3 w-3" />
+                      Quick
+                    </button>
+                    <button
+                      onClick={() => router.push('/focus')}
+                      className="flex items-center justify-center gap-1 bg-background/50 px-2 py-1.5 text-[10px] font-medium text-[hsl(var(--focus-purple))] transition-colors hover:bg-[hsl(var(--focus-purple))]/[0.08]"
+                    >
+                      Go
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={item.href}
@@ -185,16 +243,23 @@ export function Navigation() {
         {/* System status footer */}
         <div className="border-t border-border/30 p-3 space-y-3">
           {/* Quick action */}
-          <div className="rounded-lg bg-primary/[0.06] p-2.5">
+          <Link href="/focus" className="block rounded-lg bg-primary/[0.06] p-2.5 cursor-pointer hover:bg-primary/[0.08] transition-colors">
             <div className="flex items-center gap-2 mb-1.5">
               <Zap className="h-3 w-3 text-primary" />
               <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">Quick Focus</span>
             </div>
-            <p className="text-[10px] text-muted-foreground/60">Start a 25-min session</p>
+            <p className="text-[10px] text-muted-foreground/60">
+              {todayMinutes > 0
+                ? `${todayMinutes}m / ${dailyGoalMinutes}m today`
+                : 'Start a 25-min session'}
+            </p>
             <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted/30">
-              <div className="h-full w-0 rounded-full bg-[hsl(var(--focus-purple))]" />
+              <div
+                className="h-full rounded-full bg-[hsl(var(--focus-purple))] transition-all duration-500"
+                style={{ width: `${goalProgress}%` }}
+              />
             </div>
-          </div>
+          </Link>
 
           {/* System health */}
           <div className="space-y-2">
@@ -207,19 +272,29 @@ export function Navigation() {
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-muted-foreground/50">Weekly progress</span>
-                <span className="font-medium tabular-nums text-primary">&mdash;</span>
+                <span className="font-medium tabular-nums text-primary">
+                  {weeklyTotal > 0 ? `${Math.round(weeklyTotal / 60)}h ${weeklyTotal % 60}m` : '\u2014'}
+                </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
-                <div className="h-full w-0 rounded-full bg-gradient-to-r from-primary/60 to-primary" />
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-500"
+                  style={{ width: `${Math.min(Math.round((weeklyTotal / (dailyGoalMinutes * 7)) * 100), 100)}%` }}
+                />
               </div>
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-muted-foreground/50">Study streak</span>
-                <span className="font-medium tabular-nums text-[hsl(var(--warning))]">&mdash;</span>
+                <span className="font-medium tabular-nums text-[hsl(var(--warning))]">
+                  {streak.current > 0 ? `${streak.current}d` : '\u2014'}
+                </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
-                <div className="h-full w-0 rounded-full bg-gradient-to-r from-[hsl(var(--warning)/0.6)] to-[hsl(var(--warning))]" />
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[hsl(var(--warning)/0.6)] to-[hsl(var(--warning))] transition-all duration-500"
+                  style={{ width: `${Math.min(streak.current * 14, 100)}%` }}
+                />
               </div>
             </div>
           </div>
