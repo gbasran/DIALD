@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Nunito, Nunito_Sans } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navigation } from "@/components/layout/Navigation";
@@ -40,7 +41,7 @@ export default function RootLayout({
             <header className="shrink-0 border-b border-border/40 bg-background/80 backdrop-blur-sm">
               <div className="flex items-center justify-between px-4 py-2">
                 <div className="flex items-center gap-3">
-                  <h1 className="font-heading text-lg font-bold text-primary">DIALD</h1>
+                  <Link href="/" className="font-heading text-lg font-bold text-primary hover:text-primary/80 transition-colors">DIALD</Link>
                   <div className="hidden h-4 w-px bg-border/60 sm:block" />
                   <p className="hidden text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50 sm:block">
                     Academic Command Center
