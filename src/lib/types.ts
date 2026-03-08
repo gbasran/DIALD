@@ -82,6 +82,20 @@ export interface InsightCard {
   type: 'deadline' | 'strategy' | 'encouragement';
 }
 
+export interface FocusSession {
+  id: string;
+  date: string;          // ISO date string (YYYY-MM-DD)
+  startTime: string;     // ISO datetime string
+  duration: number;      // actual minutes focused
+  courseId: string | null;
+  assignmentId: string | null;
+  completed: boolean;
+}
+
+export interface FocusSettings {
+  dailyGoalMinutes: number;  // default 150
+}
+
 export const COURSE_COLORS = [
   'hsl(199, 70%, 50%)',   // Calm blue
   'hsl(160, 45%, 45%)',   // Soft green
