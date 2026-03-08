@@ -86,6 +86,7 @@ export default function FocusPage() {
   const [duration, setDuration] = useState(25);
   const [selectedPreset, setSelectedPreset] = useState<number | 'custom' | null>(25);
   const [customDuration, setCustomDuration] = useState(30);
+  const [devSeconds, setDevSeconds] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -171,7 +172,7 @@ export default function FocusPage() {
 
   const handleStart = useCallback(() => {
     startTimeRef.current = new Date().toISOString();
-    const totalSecs = duration * 60;
+    const totalSecs = devSeconds ?? duration * 60;
     setSecondsLeft(totalSecs);
     secondsLeftRef.current = totalSecs;
     endTimeRef.current = Date.now() + totalSecs * 1000;
@@ -206,7 +207,7 @@ export default function FocusPage() {
         setView('celebration');
       }
     }, 250);
-  }, [duration, addSession, clearTimer]);
+  }, [duration, devSeconds, addSession, clearTimer]);
 
   const handlePause = useCallback(() => {
     clearTimer();
@@ -311,6 +312,26 @@ export default function FocusPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Confetti pieces (must be above early returns to satisfy Rules of Hooks)
+  const confettiPieces = useMemo(
+    () =>
+      Array.from({ length: 20 }, (_, i) => {
+        const angle = (i / 20) * 360;
+        const distance = 80 + Math.random() * 120;
+        const x = Math.cos((angle * Math.PI) / 180) * distance;
+        const y = Math.sin((angle * Math.PI) / 180) * distance;
+        return {
+          x,
+          y,
+          r: Math.random() * 720,
+          color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+          delay: Math.random() * 0.3,
+        };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [view]
+  );
+
   // Duration preset selection
   const selectPreset = (minutes: number) => {
     setDuration(minutes);
@@ -347,9 +368,9 @@ export default function FocusPage() {
         <div className="pt-4">
           <Link href="/">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              className="gap-1.5 rounded-full"
             >
               <ArrowLeft className="h-4 w-4" />
               Exit Focus
@@ -562,6 +583,29 @@ export default function FocusPage() {
           </div>
         </div>
 
+        {/* Dev: 5s timer for testing animations */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                if (devSeconds) {
+                  setDevSeconds(null);
+                } else {
+                  setDevSeconds(5);
+                  setSelectedPreset('custom');
+                }
+              }}
+              className={`rounded-full border px-3 py-1 text-xs font-mono transition-colors ${
+                devSeconds
+                  ? 'border-red-500 bg-red-500/10 text-red-400'
+                  : 'border-dashed border-muted-foreground/30 text-muted-foreground/50 hover:text-muted-foreground'
+              }`}
+            >
+              {devSeconds ? `DEV: ${devSeconds}s` : 'DEV: 5s test'}
+            </button>
+          </div>
+        )}
+
         {/* Start button */}
         <div className="flex justify-center pt-2">
           <Button
@@ -580,7 +624,7 @@ export default function FocusPage() {
 
   // --- TIMER VIEW ---
   if (view === 'timer') {
-    const totalSeconds = duration * 60;
+    const totalSeconds = devSeconds ?? duration * 60;
     const progress = totalSeconds > 0 ? secondsLeft / totalSeconds : 1;
     const dashOffset = CIRCUMFERENCE * (1 - progress);
 
@@ -692,26 +736,6 @@ export default function FocusPage() {
   }
 
   // --- CELEBRATION VIEW ---
-  const confettiPieces = useMemo(
-    () =>
-      Array.from({ length: 20 }, (_, i) => {
-        const angle = (i / 20) * 360;
-        const distance = 80 + Math.random() * 120;
-        const x = Math.cos((angle * Math.PI) / 180) * distance;
-        const y = Math.sin((angle * Math.PI) / 180) * distance;
-        return {
-          x,
-          y,
-          r: Math.random() * 720,
-          color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-          delay: Math.random() * 0.3,
-        };
-      }),
-    // Only regenerate on view change to celebration
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view]
-  );
-
   return (
     <div className="animate-fade-in flex h-screen flex-col items-center justify-center px-4">
       {/* Confetti burst */}
