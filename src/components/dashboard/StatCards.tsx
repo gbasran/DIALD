@@ -4,16 +4,19 @@ import type { Course } from '@/lib/types';
 interface StatCardsProps {
   courses: Course[];
   dueThisWeek: number;
+  focusTodayMinutes: number;
+  weeklyGoalProgress: number;
 }
 
-export function StatCards({ courses, dueThisWeek }: StatCardsProps) {
+export function StatCards({ courses, dueThisWeek, focusTodayMinutes, weeklyGoalProgress }: StatCardsProps) {
+  const focusSub = focusTodayMinutes > 0 ? 'keep it up' : 'start a session';
+  const goalSub = weeklyGoalProgress >= 100 ? 'goal reached!' : weeklyGoalProgress >= 50 ? 'on track' : 'getting started';
+
   const stats = [
     { title: 'Active Courses', value: String(courses.length), icon: BookOpen, sub: 'this semester', color: '' },
     { title: 'Due This Week', value: String(dueThisWeek), icon: Target, sub: `${dueThisWeek === 0 ? 'all clear' : 'assignments pending'}`, color: dueThisWeek > 0 ? 'text-destructive' : '' },
-    // PLACEHOLDER: Focus Today uses hardcoded demo data
-    { title: 'Focus Today', value: '127m', icon: Clock, sub: '\u2191 23m vs avg', color: 'text-accent' },
-    // PLACEHOLDER: Weekly Goal uses hardcoded demo data
-    { title: 'Weekly Goal', value: '85%', icon: TrendingUp, sub: 'on track', color: '' },
+    { title: 'Focus Today', value: `${focusTodayMinutes}m`, icon: Clock, sub: focusSub, color: 'text-accent' },
+    { title: 'Weekly Goal', value: `${weeklyGoalProgress}%`, icon: TrendingUp, sub: goalSub, color: '' },
   ];
 
   return (

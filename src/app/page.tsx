@@ -18,6 +18,7 @@ import { StudyStreak } from '@/components/dashboard/StudyStreak';
 import { FocusTimePanel } from '@/components/dashboard/FocusTimePanel';
 import { StatusDots } from '@/components/assignments/StatusDots';
 import { useLastConversation } from '@/hooks/use-last-conversation';
+import { useFocusSessions } from '@/hooks/use-focus-sessions';
 import type { ClassTime } from '@/lib/types';
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const { insights, isLoading: insightsLoading, refresh: fetchInsights } = useInsights();
 
   const lastConversation = useLastConversation();
+  const { sessions, isLoaded: sessionsLoaded, todayMinutes, weeklyTotal, goalProgress } = useFocusSessions();
 
   const [greeting, setGreeting] = useState('');
   const [todayName, setTodayName] = useState('');
@@ -40,7 +42,7 @@ export default function DashboardPage() {
   }, []);
 
   // Loading state
-  if (!coursesLoaded || !assignmentsLoaded) {
+  if (!coursesLoaded || !assignmentsLoaded || !sessionsLoaded) {
     return <DashboardSkeleton />;
   }
 
@@ -96,7 +98,7 @@ export default function DashboardPage() {
     })
     .slice(0, 5);
 
-  const activityEvents = deriveActivityEvents(assignments, courses);
+  const activityEvents = deriveActivityEvents(assignments, courses, sessions);
 
   return (
     <div className="flex h-full flex-col animate-fade-in">
@@ -116,7 +118,7 @@ export default function DashboardPage() {
 
         {/* LEFT COLUMN: Stats */}
         <div className="flex flex-col gap-2.5">
-          <StatCards courses={courses} dueThisWeek={dueThisWeek} />
+          <StatCards courses={courses} dueThisWeek={dueThisWeek} focusTodayMinutes={todayMinutes} weeklyGoalProgress={goalProgress} />
           <ActivityFeed events={activityEvents} />
         </div>
 
@@ -271,7 +273,7 @@ export default function DashboardPage() {
                 <p className="text-[9px] text-muted-foreground/50">Done</p>
               </div>
               <div>
-                <p className="font-heading text-lg font-bold text-[hsl(var(--focus-purple))]">8h</p>
+                <p className="font-heading text-lg font-bold text-[hsl(var(--focus-purple))]">{weeklyTotal >= 60 ? `${Math.floor(weeklyTotal / 60)}h` : weeklyTotal > 0 ? `${weeklyTotal}m` : '0h'}</p>
                 <p className="text-[9px] text-muted-foreground/50">Studied</p>
               </div>
             </div>
