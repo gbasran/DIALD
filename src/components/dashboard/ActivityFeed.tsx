@@ -1,3 +1,4 @@
+import { Sparkles } from 'lucide-react';
 import type { ActivityEvent } from '@/lib/activity';
 
 interface ActivityFeedProps {
@@ -28,7 +29,10 @@ export function ActivityFeed({ events }: ActivityFeedProps) {
             );
           })
         ) : (
-          <p className="text-[10px] text-muted-foreground/50">No activity yet</p>
+          <div className="flex flex-col items-center">
+            <Sparkles className="mx-auto h-4 w-4 text-muted-foreground/30 mb-1" />
+            <p className="text-[10px] text-muted-foreground/50">Your activity will show up here</p>
+          </div>
         )}
       </div>
     </div>

@@ -6,7 +6,7 @@ import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { StatusDots } from '@/components/assignments/StatusDots';
 import type { Assignment, Course } from '@/lib/types';
 import { getUrgencyColor, getUrgencyBorder, formatRelativeDate, sortByStatusThenDueDate } from '@/lib/utils';
-import { Pencil, Trash2, Clock } from 'lucide-react';
+import { Pencil, Trash2, Clock, ClipboardList } from 'lucide-react';
 
 interface AssignmentListProps {
   assignments: Assignment[];
@@ -62,11 +62,12 @@ export function AssignmentList({
   if (assignments.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center animate-fade-in">
+        <ClipboardList className="mx-auto h-8 w-8 text-muted-foreground/40 mb-3" />
         <p className="text-lg font-heading font-semibold text-foreground">
           No assignments yet
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Let&apos;s add one! Tap the button above to get started.
+          Nothing on your plate — that&apos;s either great news or a good time to add some!
         </p>
       </div>
     );

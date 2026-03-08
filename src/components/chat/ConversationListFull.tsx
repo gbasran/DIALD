@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Search,
   MessageSquare,
+  MessageCircle,
   Pencil,
   Trash2,
   Check,
@@ -202,11 +203,23 @@ export function ConversationListFull({
 
       {/* List */}
       {displayed.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          {query.trim()
-            ? 'No conversations match your search'
-            : 'No conversations yet. Start one from the chat page!'}
-        </p>
+        <div className="py-8 text-center animate-fade-in">
+          <MessageCircle className="mx-auto h-8 w-8 text-muted-foreground/40 mb-3" />
+          {query.trim() ? (
+            <p className="text-sm text-muted-foreground">
+              No conversations match your search
+            </p>
+          ) : (
+            <>
+              <p className="text-lg font-heading font-semibold text-foreground">
+                No conversations yet
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Your AI study buddy is ready when you are!
+              </p>
+            </>
+          )}
+        </div>
       ) : (
         <div className="grid gap-2">
           {displayed.map((convo) => (

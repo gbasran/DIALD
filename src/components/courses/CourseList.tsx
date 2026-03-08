@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import type { Course, ClassTime } from '@/lib/types';
-import { MapPin, Clock, Pencil, Trash2 } from 'lucide-react';
+import { MapPin, Clock, Pencil, Trash2, BookOpen } from 'lucide-react';
 
 interface CourseListProps {
   courses: Course[];
@@ -51,11 +51,12 @@ export function CourseList({ courses, onEdit, onDelete }: CourseListProps) {
   if (courses.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center animate-fade-in">
+        <BookOpen className="mx-auto h-8 w-8 text-muted-foreground/40 mb-3" />
         <p className="text-lg font-heading font-semibold text-foreground">
           No courses yet
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Let&apos;s add your first one! Tap the button above to get started.
+          Your semester starts here! Add your first course or import from Bridge.
         </p>
       </div>
     );

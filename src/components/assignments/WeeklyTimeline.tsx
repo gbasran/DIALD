@@ -183,7 +183,7 @@ export function WeeklyTimeline({
               <div className="flex-1 space-y-2">
                 {items.length === 0 && (
                   <p className="text-xs text-muted-foreground/50 text-center mt-4">
-                    No assignments
+                    Nothing due
                   </p>
                 )}
                 {(maxPerDay ? items.slice(0, maxPerDay) : items).map((assignment) => {
