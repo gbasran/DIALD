@@ -45,12 +45,13 @@ export function formatRelativeDate(dateStr: string): string {
   const diffHours = diffMs / (1000 * 60 * 60);
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-  // Past dates
+  // Past dates — non-punitive framing (never tell user how late they are)
   if (diffMs < 0) {
     const absDays = Math.abs(diffDays);
     if (absDays === 0) return 'Due today';
-    if (absDays === 1) return 'Due yesterday';
-    return `${absDays} days ago`;
+    if (absDays === 1) return 'Ready to tackle';
+    if (absDays <= 3) return 'Waiting for you';
+    return 'Ready when you are';
   }
 
   // Future dates
