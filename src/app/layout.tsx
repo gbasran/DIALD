@@ -53,7 +53,7 @@ export default function RootLayout({
             {/* Content + Nav — fills remaining viewport */}
             <div className="flex min-h-0 flex-1">
               {/* Main content — scrollable only on mobile */}
-              <main className="min-h-0 flex-1 overflow-y-auto p-3 pb-20 lg:overflow-hidden lg:pb-3">
+              <main className="min-h-0 flex-1 overflow-y-auto p-3 pb-20 lg:pb-3">
                 {children}
               </main>
 

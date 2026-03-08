@@ -47,16 +47,26 @@ export function BridgeSchedule() {
 
   if (results) {
     return (
-      <ReviewTable
-        courses={results.courses}
-        assignments={results.assignments}
-        mode={results.courses.length > 0 && results.assignments.length > 0 ? 'mixed' : results.courses.length > 0 ? 'courses' : 'assignments'}
-        onReset={() => {
-          setResults(null);
-          setText('');
-          setWarnings([]);
-        }}
-      />
+      <div className="space-y-3 animate-fade-in">
+        {warnings.length > 0 && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+            <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">Heads up:</p>
+            {warnings.map((w, i) => (
+              <p key={i} className="text-xs text-amber-600/80 dark:text-amber-400/80">{w}</p>
+            ))}
+          </div>
+        )}
+        <ReviewTable
+          courses={results.courses}
+          assignments={results.assignments}
+          mode={results.courses.length > 0 && results.assignments.length > 0 ? 'mixed' : results.courses.length > 0 ? 'courses' : 'assignments'}
+          onReset={() => {
+            setResults(null);
+            setText('');
+            setWarnings([]);
+          }}
+        />
+      </div>
     );
   }
 

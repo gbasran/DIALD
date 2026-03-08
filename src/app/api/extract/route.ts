@@ -6,7 +6,7 @@ type ExtractionType = 'syllabus' | 'crowdmark' | 'bridge';
 
 const VALID_TYPES: ExtractionType[] = ['syllabus', 'crowdmark', 'bridge'];
 
-const MAX_TEXT_LENGTH = 10000;
+const MAX_TEXT_LENGTH = 50000;
 
 function buildSyllabusPrompt(
   text: string,
@@ -16,17 +16,32 @@ function buildSyllabusPrompt(
     ? `\nEXISTING COURSES (for reference):\n${existingCourses.map((c) => `- ${c.code}: ${c.name}`).join('\n')}\n`
     : '';
 
-  return `Extract course and assignment information from this syllabus text.
+  return `Extract course and assignment information from this university syllabus.
 ${courseContext}
-Extract:
-1. The course name and course code (e.g., "CPSC 3660")
-2. All assignments, exams, quizzes, labs, or deliverables with:
-   - name: the assignment/exam name
-   - dueDate: due date in ISO format (YYYY-MM-DD). If only a month/week is given, estimate the date.
-   - description: brief description if available, otherwise empty string
-   - estimatedMinutes: estimated time to complete (60 for assignments, 120 for exams/projects, 30 for quizzes)
+STEP 1: Extract the course info:
+- courseCode: standardized format "DEPT 1234" (e.g., "Computer Science 3660" → "CPSC 3660", "DASC 4850", "MATH-3850" → "MATH 3850")
+- courseName: the full course title (expand abbreviations, e.g., "Opt." → "Optimization")
+- Convert full department names to ULeth abbreviations: "Computer Science" → "CPSC", "Mathematics" → "MATH", "Data Science" → "DATA", "Music" → "MUSI", "Astronomy" → "ASTR"
 
-Return JSON: { "courseCode": "DEPT 1234", "courseName": "Course Title", "assignments": [{ "name": string, "dueDate": "YYYY-MM-DD", "courseCode": "DEPT 1234", "description": string, "estimatedMinutes": number }] }
+STEP 2: Extract assignments, exams, and deliverables that have SPECIFIC DATES.
+
+CRITICAL RULES:
+- ONLY extract items that have a specific date or date range in the syllabus. DO NOT invent dates.
+- Many syllabuses only say "4-5 assignments worth 20%" or "approx. 10 quizzes" with NO dates. DO NOT create entries for these — skip them entirely.
+- For date ranges or exam windows (e.g., "Feb 24-28" or "Jan 29 - Feb 4"), use the LAST date as the dueDate. Include the window in the name, e.g., "Exam 1 (Jan 29 - Feb 4)" not just "Exam 1".
+- For items from a class schedule table with a "Deadlines" column, use the date from that row.
+- Use the current academic year for dates. If the syllabus says "Winter 2026" or similar, dates like "Feb 12" mean Feb 12, 2026. Do NOT use past years.
+- estimatedMinutes: 30 for quizzes/ePolls, 60 for assignments/homework, 90 for labs/projects, 120 for exams/midterms/finals, 180 for final projects.
+
+Return JSON:
+{
+  "courseCode": "DEPT 1234",
+  "courseName": "Full Course Title",
+  "assignments": [{ "name": string, "dueDate": "YYYY-MM-DD", "courseCode": "DEPT 1234", "description": string, "estimatedMinutes": number }],
+  "warnings": ["Human-readable notes about items WITHOUT dates, e.g., 'CPSC 3660 has 4-5 assignments but no due dates listed'"]
+}
+
+The "warnings" array helps the user know what WASN'T imported. Always include a warning for assessment categories that have no dates.
 
 SYLLABUS TEXT:
 ${text}`;
@@ -40,18 +55,25 @@ function buildCrowdmarkPrompt(
     ? `\nEXISTING COURSES (for reference):\n${existingCourses.map((c) => `- ${c.code}: ${c.name}`).join('\n')}\n`
     : '';
 
-  return `Extract assignment information from this Crowdmark email or notification text.
+  return `Extract assignment information from this Crowdmark course page.
 ${courseContext}
-Extract all assignments, exams, or assessments mentioned with:
-- name: the assignment/exam name
-- dueDate: due date in ISO format (YYYY-MM-DD)
-- courseCode: the course code if mentioned (e.g., "CPSC 3660")
-- description: any additional details, otherwise empty string
-- estimatedMinutes: estimated time (60 for assignments, 120 for exams, 30 for quizzes)
+The first line contains the course info in the format "DEPT-1234-Section-Course Name" (e.g., "MATH-3850-A-Numerical Opt. & Machine Learn").
+Convert the department-number format to a course code with a space (e.g., "MATH-3850" -> "MATH 3850").
 
-Return JSON: { "courseCode": "DEPT 1234", "courseName": "Course Title", "assignments": [{ "name": string, "dueDate": "YYYY-MM-DD", "courseCode": "DEPT 1234", "description": string, "estimatedMinutes": number }] }
+Below that is a table of assignments with columns: Title, Due date, Status, Score.
 
-EMAIL/NOTIFICATION TEXT:
+IMPORTANT: Only extract assignments where Status is "Not submitted". Skip any assignments with Status "Submitted" — those are already done.
+
+For each non-submitted assignment extract:
+- name: the assignment/quiz/exam title
+- dueDate: due date in ISO format (YYYY-MM-DD). Parse dates like "Sun, Mar 15, 2026 11:59 PM (Mountain Daylight Time)".
+- courseCode: the course code from the header (e.g., "MATH 3850")
+- description: empty string
+- estimatedMinutes: 60 for assignments, 30 for quizzes, 120 for exams/midterms/finals
+
+Return JSON: { "courseCode": "DEPT 1234", "courseName": "Course Title", "assignments": [{ "name": string, "dueDate": "YYYY-MM-DD", "courseCode": "DEPT 1234", "description": string, "estimatedMinutes": number }], "warnings": ["Notes about skipped items, e.g., 'Skipped 7 submitted assignments'"] }
+
+CROWDMARK COURSE PAGE:
 ${text}`;
 }
 
