@@ -6,6 +6,18 @@
 
 ---
 
+## How AI was used
+
+i'm gonna be real about this because i think transparency matters more than pretending.
+
+my role on this project was basically solutions architect. before any code got written, i was in Figma mocking up layouts, figuring out component hierarchy, and getting the visual language right. when i needed to iterate fast on a specific interaction or tweak a color palette, i'd jump into Paint and just sketch it out quick and dirty. the design work came first, always.
+
+from there i'd define the system: what features to build, how they should work, how the data should flow, and why localStorage over a database. every product, architecture, and design decision was mine. i did a lot of the coding myself too, both frontend and backend. the API routes, rate limiting, Gemini integration, structured prompt engineering, iCal parser, the whole serverless layer is stuff i was hands-on with. same with the hooks, state management patterns, and wiring the client together. AI (Claude) was more like a senior dev i could bounce ideas off of and delegate chunks of work to when i knew exactly what i wanted but didn't want to spend an hour typing boilerplate.
+
+when something broke or didn't feel right, i'd step back, look at it from above, figure out what the system *should* be doing, and then either fix it myself or debug it together with AI. i wasn't just accepting output blindly. i was reviewing, redirecting, screenshotting the result, comparing it against my mockups, and sometimes scrapping entire approaches when they didn't match the vision.
+
+think of it like running a one-person agency where i'm the designer, architect, and lead dev, and AI is a really fast junior who's good at churning out code when given clear direction. i created the mockups, wrote a lot of the code, reviewed everything, and made the calls. AI helped me move faster, but this project has my fingerprints all over it.
+
 ## Inspiration
 
 so here's the thing. i have ADHD and i'm a CS student. every productivity app out there is built by neurotypical people for neurotypical people. you open one up and it's like "here's 47 features and a planner, go organize your life!" and my brain just... shuts down.
@@ -90,18 +102,6 @@ deployed on **Vercel** with zero config. the no-database architecture means ther
 | **Icons**         | Lucide React                                             |
 | **Deployment**    | Vercel                                                   |
 | **State**         | localStorage + custom React hooks                        |
-
-## How AI was used
-
-i'm gonna be real about this because i think transparency matters more than pretending.
-
-my role on this project was basically solutions architect. before any code got written, i was in Figma mocking up layouts, figuring out component hierarchy, and getting the visual language right. when i needed to iterate fast on a specific interaction or tweak a color palette, i'd jump into Paint and just sketch it out quick and dirty. the design work came first, always.
-
-from there i'd define the system: what features to build, how they should work, how the data should flow, and why localStorage over a database. every product, architecture, and design decision was mine. i did a lot of the coding myself too, both frontend and backend. the API routes, rate limiting, Gemini integration, structured prompt engineering, iCal parser, the whole serverless layer is stuff i was hands-on with. same with the hooks, state management patterns, and wiring the client together. AI (Claude) was more like a senior dev i could bounce ideas off of and delegate chunks of work to when i knew exactly what i wanted but didn't want to spend an hour typing boilerplate.
-
-when something broke or didn't feel right, i'd step back, look at it from above, figure out what the system *should* be doing, and then either fix it myself or debug it together with AI. i wasn't just accepting output blindly. i was reviewing, redirecting, screenshotting the result, comparing it against my mockups, and sometimes scrapping entire approaches when they didn't match the vision.
-
-think of it like running a one-person agency where i'm the designer, architect, and lead dev, and AI is a really fast junior who's good at churning out code when given clear direction. i created the mockups, wrote a lot of the code, reviewed everything, and made the calls. AI helped me move faster, but this project has my fingerprints all over it.
 
 ---
 
