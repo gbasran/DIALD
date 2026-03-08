@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useChat } from '@/hooks/use-chat';
 import { useConversations } from '@/hooks/use-conversations';
@@ -46,14 +46,6 @@ function ChatPageContent() {
     string | undefined
   >(conversationParam ?? undefined);
 
-  // Handle ?c= param changes (e.g. Continue button from nav)
-  useEffect(() => {
-    if (conversationParam) {
-      setSelectedConversationId(conversationParam);
-      setView('conversation');
-    }
-  }, [conversationParam]);
-
   const {
     conversations,
     recentConversations,
@@ -69,7 +61,43 @@ function ChatPageContent() {
     clearChat,
     retryLast,
     isLoaded: chatLoaded,
+    activeConversationId,
   } = useChat(selectedConversationId);
+
+  // Sync URL param → state when navigating via browser or nav buttons
+  const prevParamRef = useRef(conversationParam);
+  useEffect(() => {
+    const prevParam = prevParamRef.current;
+    prevParamRef.current = conversationParam;
+
+    if (conversationParam) {
+      setSelectedConversationId(conversationParam);
+      setView('conversation');
+    } else if (prevParam !== null) {
+      // URL changed from /chat?c=xxx to /chat — reset to landing
+      clearChat();
+      setSelectedConversationId(undefined);
+      setView('landing');
+    }
+  }, [conversationParam, clearChat]);
+
+  // Update the URL when a NEW conversation is created (activeConversationId
+  // transitions from null → a value). This only happens on the first message
+  // in a fresh chat. We track the previous value via ref so this never fires
+  // when navigating away (where activeConversationId goes from "xxx" → null).
+  const prevActiveIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevActiveIdRef.current;
+    prevActiveIdRef.current = activeConversationId;
+
+    if (
+      prev === null &&
+      activeConversationId &&
+      activeConversationId !== conversationParam
+    ) {
+      router.replace(`/chat?c=${activeConversationId}`, { scroll: false });
+    }
+  }, [activeConversationId, conversationParam, router]);
 
   // Loading state
   if (!conversationsLoaded || (!chatLoaded && view === 'conversation')) {
@@ -96,8 +124,7 @@ function ChatPageContent() {
       : null;
 
   const handleSelectConversation = (id: string) => {
-    setSelectedConversationId(id);
-    setView('conversation');
+    router.push(`/chat?c=${id}`);
   };
 
   const handleSendPrompt = (text: string) => {
@@ -113,14 +140,11 @@ function ChatPageContent() {
       timestamp: Date.now(),
     };
     const newId = createConversation([boilerplate]);
-    setSelectedConversationId(newId);
-    setView('conversation');
+    router.push(`/chat?c=${newId}`);
   };
 
   const handleNewChat = () => {
     clearChat();
-    setSelectedConversationId(undefined);
-    setView('landing');
     router.replace('/chat');
   };
 

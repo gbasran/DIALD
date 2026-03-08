@@ -104,8 +104,9 @@ export function useConversations() {
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id !== id) return c;
-          const title =
-            c.title === '' ? generateTitle(messages) : c.title;
+          // Regenerate title if it's empty or still the default placeholder
+          const needsTitle = !c.title || c.title === 'New conversation';
+          const title = needsTitle ? generateTitle(messages) : c.title;
           return { ...c, messages, title, updatedAt: Date.now() };
         })
       );

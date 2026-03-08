@@ -42,7 +42,7 @@ const navItems = [
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const lastConversation = useLastConversation(pathname);
+  const lastConversation = useLastConversation();
   const lastConversationId = lastConversation?.id ?? null;
 
   if (pathname === '/focus') {

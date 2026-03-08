@@ -64,43 +64,77 @@ export function useChat(conversationId?: string) {
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Ref tracks the active conversation ID for use inside async callbacks
-  // where React state would be stale (streaming, fetch handlers).
+  // Reactive state for the active conversation ID (drives URL updates in the page)
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(
+    conversationId ?? null
+  );
+
+  // Ref mirrors the state for use inside async callbacks where state would be stale
   const activeIdRef = useRef<string | null>(conversationId ?? null);
   const abortRef = useRef<AbortController | null>(null);
-  const initialized = useRef(false);
+
+  // Use a ref for conversations so the init effect doesn't re-run on every conversation update
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
 
   // Keep a ref with the latest messages so async callbacks avoid stale closures
   const messagesRef = useRef<ChatMessage[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const { courses } = useCourses();
+  const coursesRef = useRef(courses);
+  coursesRef.current = courses;
+
   const { assignments } = useAssignments();
 
-  // Initialize once: load existing conversation or inject greeting
+  // Initialize or reinitialize when conversationId or conversationsLoaded changes
   useEffect(() => {
-    if (!conversationsLoaded || initialized.current) return;
-    initialized.current = true;
+    if (!conversationsLoaded) return;
+
+    // Skip re-init if the conversation ID matches what's already active.
+    // This happens when the URL updates after conversation creation —
+    // we don't want to abort the in-flight stream.
+    if (conversationId && conversationId === activeIdRef.current) return;
+
+    // Abort any in-flight request
+    abortRef.current?.abort();
+    setIsStreaming(false);
+    setError(null);
 
     if (conversationId) {
-      const existing = conversations.find((c) => c.id === conversationId);
+      const existing = conversationsRef.current.find((c) => c.id === conversationId);
       if (existing) {
         setMessages(existing.messages);
         activeIdRef.current = conversationId;
+        setActiveConversationId(conversationId);
+      } else {
+        // Conversation not found — show greeting
+        const greetingMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: buildGreeting(coursesRef.current),
+          timestamp: Date.now(),
+        };
+        setMessages([greetingMessage]);
+        activeIdRef.current = null;
+        setActiveConversationId(null);
       }
     } else {
       // New conversation — inject greeting
       const greetingMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: buildGreeting(courses),
+        content: buildGreeting(coursesRef.current),
         timestamp: Date.now(),
       };
       setMessages([greetingMessage]);
+      activeIdRef.current = null;
+      setActiveConversationId(null);
     }
 
     setIsLoaded(true);
-  }, [conversationsLoaded, conversationId, conversations, courses]);
+    // Only re-run when the conversation ID or loaded state changes — NOT on conversations array changes
+  }, [conversationsLoaded, conversationId]);
 
   // Abort on unmount
   useEffect(() => {
@@ -128,6 +162,7 @@ export function useChat(conversationId?: string) {
         const initialMessages = [...messagesRef.current, userMessage];
         currentId = createConversation(initialMessages);
         activeIdRef.current = currentId;
+        setActiveConversationId(currentId);
       }
 
       const capturedId = currentId;
@@ -136,7 +171,7 @@ export function useChat(conversationId?: string) {
       setIsStreaming(true);
       setError(null);
 
-      const studentContext = buildStudentContext(courses, assignments);
+      const studentContext = buildStudentContext(coursesRef.current, assignments);
 
       try {
         const response = await fetch('/api/chat', {
@@ -160,7 +195,7 @@ export function useChat(conversationId?: string) {
           setError(errorText);
           setIsStreaming(false);
           if (activeIdRef.current === capturedId) {
-            updateConversation(capturedId, [...messagesRef.current, userMessage]);
+            updateConversation(capturedId, messagesRef.current);
           }
           return;
         }
@@ -206,8 +241,12 @@ export function useChat(conversationId?: string) {
                 : m
             )
           );
-          // Persist outside the updater — reconstruct from known state
-          const allMessages = [...messagesRef.current.filter(m => m.id !== assistantId), userMessage, { id: assistantId, role: 'assistant' as const, content: accumulated, timestamp: Date.now() }];
+          // messagesRef may lag behind state, so reconstruct from the finalized set
+          const allMessages = messagesRef.current.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: accumulated, timestamp: Date.now() }
+              : m
+          );
           updateConversation(capturedId, allMessages);
         }
       } catch (err) {
@@ -220,15 +259,16 @@ export function useChat(conversationId?: string) {
         setIsStreaming(false);
       }
     },
-    [courses, assignments, createConversation, updateConversation]
+    [assignments, createConversation, updateConversation]
   );
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
     setMessages([]);
     activeIdRef.current = null;
+    setActiveConversationId(null);
     setError(null);
-    initialized.current = false;
+    setIsLoaded(false);
   }, []);
 
   const retryLast = useCallback(async () => {
@@ -255,6 +295,6 @@ export function useChat(conversationId?: string) {
     clearChat,
     retryLast,
     isLoaded,
-    activeConversationId: activeIdRef.current,
+    activeConversationId,
   };
 }
