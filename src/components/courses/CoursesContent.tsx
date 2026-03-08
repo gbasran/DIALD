@@ -13,6 +13,7 @@ import {
 import { CourseForm } from '@/components/courses/CourseForm';
 import { CourseList } from '@/components/courses/CourseList';
 import type { Course } from '@/lib/types';
+import { ImportButton } from '@/components/import/ImportButton';
 import { Plus, Database } from 'lucide-react';
 
 export function CoursesContent() {
@@ -64,7 +65,8 @@ export function CoursesContent() {
           <h2 className="font-heading text-2xl font-bold">Courses</h2>
           <p className="text-muted-foreground">Manage your classes</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <ImportButton />
           {courses.length === 0 && (
             <Button variant="secondary" onClick={loadDemoData}>
               <Database className="h-4 w-4 mr-1" />

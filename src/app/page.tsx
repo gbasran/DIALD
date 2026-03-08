@@ -19,6 +19,7 @@ import { FocusTimePanel } from '@/components/dashboard/FocusTimePanel';
 import { StatusDots } from '@/components/assignments/StatusDots';
 import { useLastConversation } from '@/hooks/use-last-conversation';
 import { useFocusSessions } from '@/hooks/use-focus-sessions';
+import { ImportButton } from '@/components/import/ImportButton';
 import type { ClassTime } from '@/lib/types';
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
@@ -108,9 +109,12 @@ export default function DashboardPage() {
           <p className="text-xs font-medium text-muted-foreground">Good {greeting || 'evening'}</p>
           <h2 className="font-heading text-xl font-bold tracking-tight">Mission Control</h2>
         </div>
-        <p className="text-[11px] text-muted-foreground">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-        </p>
+        <div className="flex items-center gap-3">
+          <ImportButton />
+          <p className="text-[11px] text-muted-foreground">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+          </p>
+        </div>
       </div>
 
       {/* Full viewport grid */}

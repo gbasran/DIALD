@@ -18,6 +18,7 @@ import { AssignmentList } from '@/components/assignments/AssignmentList';
 import { WeeklyTimeline } from '@/components/assignments/WeeklyTimeline';
 import { STORAGE_KEYS } from '@/lib/types';
 import type { Assignment } from '@/lib/types';
+import { ImportButton } from '@/components/import/ImportButton';
 import { Plus, Database, BookOpen } from 'lucide-react';
 
 export function AssignmentsContent() {
@@ -107,6 +108,7 @@ export function AssignmentsContent() {
           <p className="text-muted-foreground">Manage your tasks</p>
         </div>
         <div className="flex items-center gap-3">
+          <ImportButton />
           <div className="flex gap-2">
             {assignments.length === 0 && (
               <Button variant="secondary" onClick={handleLoadDemoData}>
